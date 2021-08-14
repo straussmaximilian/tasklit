@@ -8,25 +8,33 @@
 
 from datetime import timedelta
 
-FORMAT = {'task_id':[],'created':[], 'process id' : [], 'job name': [], 'command': [], 'last update': [], 'running': []}
+FORMAT = {
+    "task_id": [],
+    "created": [],
+    "process id": [],
+    "job name": [],
+    "command": [],
+    "last update": [],
+    "running": [],
+}
 
-task_names = ['Mimas', 'Enceladus', 'Tethys', 'Dione', 'Rhea', 'Titan', 'Iapetus']
+task_names = ["Mimas", "Enceladus", "Tethys", "Dione", "Rhea", "Titan", "Iapetus"]
 
 time_values = {}
-time_values['Minutes'] = 59
-time_values['Hours'] = 59
-time_values['Days'] = 364
-time_values['Weeks'] = 51
+time_values["Minutes"] = 59
+time_values["Hours"] = 59
+time_values["Days"] = 364
+time_values["Weeks"] = 51
 
 date_translation = {}
-date_translation['Days'] = timedelta(days=1)
-date_translation['Hours'] = timedelta(hours=1)
-date_translation['Minutes'] = timedelta(minutes=1)
-date_translation['Weeks'] = timedelta(weeks=1)
+date_translation["Days"] = timedelta(days=1)
+date_translation["Hours"] = timedelta(hours=1)
+date_translation["Minutes"] = timedelta(minutes=1)
+date_translation["Weeks"] = timedelta(weeks=1)
 
-days = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun']
+days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 
-day_lookup = {i:_ for i, _ in enumerate(days)}
+day_lookup = {i: _ for i, _ in enumerate(days)}
 
 DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
 
