@@ -12,31 +12,30 @@ import random
 import socket
 
 from globals import FORMAT, DATE_FORMAT, time_values, day_lookup, BASE_LOG_DIR
-from utils import try_cmd, select_date, get_task_id, read_log, run_process, refresh
+from utils import (
+    try_cmd,
+    select_date,
+    get_task_id,
+    read_log,
+    run_process,
+    refresh,
+    get_stamp,
+)
 from jobnames import get_job_name
 
-## Main interface
+# Main interface
 
 engine = create_engine("sqlite:///data.db", echo=False)
 
 st.write("# 🕙 Tasklit")
 st.text(f"A browser-based task scheduling system. Running on {socket.gethostname()}")
 
-# last log
+#
 try:
     df = pd.read_sql_table("processes", con=engine)
     df["running"] = df["process id"].apply(lambda x: psutil.pid_exists(x))
 except ValueError:
     df = pd.DataFrame(FORMAT)
-
-
-def get_stamp(x):
-    file = f"{BASE_LOG_DIR}{x}.txt"
-    if os.path.isfile(file):
-        return datetime.fromtimestamp(os.path.getmtime(file))
-    else:
-        return None
-
 
 try:
     df["last update"] = df["job name"].apply(lambda x: get_stamp(x))

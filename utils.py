@@ -13,9 +13,17 @@ from globals import (
     DEFAULT_LOG_DIR_OUT,
     date_translation,
 )
+import sqlalchemy
+from typing import Union
+import os
 
 
 def try_cmd(command: str):
+    """
+    Utility function to test command line execution
+    Will open a subprocess with the given command and log to a default file.
+    The log file will be read and displayed via streamlit.
+    """
     st.info(f"Running '{command}'")
     with open(DEFAULT_LOG_DIR_OUT, "wb") as out:
         p = subprocess.Popen(command.split(" "), stdout=out, stderr=out)
@@ -30,6 +38,9 @@ def try_cmd(command: str):
 
 
 def select_date():
+    """
+    Utility function to select scheduling information.
+    """
 
     col1, col2, col3 = st.beta_columns(3)
 
@@ -81,13 +92,19 @@ def select_date():
     return start, unit, quantity, weekdays, frequency, execution
 
 
-def run_job(command: str, job_name):
+def run_job(command: str, job_name: str) -> Process:
+    """
+    Starts a subprocess for a given command and logs to file.
+    """
     with open(f"{BASE_LOG_DIR}{job_name}_stdout.txt", "ab") as out:
         p = subprocess.Popen(command.split(" "), stdout=out, stderr=out)
         return p
 
 
-def refresh(to_wait):
+def refresh(to_wait: int):
+    """
+    Utility function that waits for a given amount and then restarts streamlit.
+    """
     ref = st.empty()
     for i in range(to_wait):
         ref.write(f"Refreshing in {to_wait-i} s")
@@ -95,11 +112,10 @@ def refresh(to_wait):
     raise st.script_runner.RerunException(st.script_request_queue.RerunData(None))
 
 
-def check_weekday(now, weekdays):
+def check_weekday(now: datetime, weekdays: list) -> bool:
     """
     Check if function should be executed based on the weekday
     """
-
     if weekdays is None:
         return True  # Always execute if this is none
     else:
@@ -109,7 +125,10 @@ def check_weekday(now, weekdays):
             return False
 
 
-def write_execution_log(job_name, command, now, msg):
+def write_execution_log(job_name: str, command: str, now: datetime, msg: str):
+    """
+    Utility function to write execution time to log.
+    """
     now_str = now.strftime(DATE_FORMAT)
     for suffix in [".txt", "_stdout.txt"]:
         with open(f"{BASE_LOG_DIR}{job_name}{suffix}", "a") as file:
@@ -119,8 +138,21 @@ def write_execution_log(job_name, command, now, msg):
 
 
 def scheduler_process(
-    command, job_name, start, unit, quantity, weekdays, frequency, execution, task_id
+    command: str,
+    job_name: str,
+    start: datetime,
+    unit: str,
+    quantity: int,
+    weekdays: list,
+    frequency: str,
+    execution: str,
+    task_id: int,
 ):
+    """
+    Scheduling process.
+    Creates an event loop that updates very second and checks for the date.
+    Executes command if date criterion is met.
+    """
 
     if frequency == "Once":
         write_execution_log(job_name, command, datetime.now(), "Executed")
@@ -147,16 +179,16 @@ def scheduler_process(
 
 
 def run_process(
-    command,
-    job_name,
-    start,
-    unit,
-    quantity,
-    weekdays,
-    frequency,
-    execution,
-    task_id,
-    engine,
+    command: str,
+    job_name: str,
+    start: datetime,
+    unit: str,
+    quantity: int,
+    weekdays: list,
+    frequency: str,
+    execution: str,
+    task_id: int,
+    engine: sqlalchemy.engine.base.Engine,
 ):
 
     # st.write(command, job_name, start, unit, quantity, weekdays, frequency, task_id)
@@ -193,19 +225,28 @@ def run_process(
     # FORMAT = {'task_id':[],'created':[], 'process id' : [], 'job name': [], 'command': [], 'last update': [], 'running': []}
 
 
-def write_st_log(file):
+def write_st_log(file: str):
+    """
+    Utility function to read a logfile and print in streamlit.
+    """
     with open(file, "r", encoding="utf-8") as reader:
         log = reader.readlines()
         st.code("".join(log))
 
 
-def read_log(file):
+def read_log(file: str) -> list:
+    """
+    Utility function to read a logfile.
+    """
     with open(file, "r", encoding="utf-8") as reader:
         log = reader.readlines()
         return log
 
 
-def get_task_id(df):
+def get_task_id(df: pd.DataFrame) -> int:
+    """
+    Returns a unique task_id based on existing task ids.
+    """
     task_id = 1
     while task_id in df["task_id"].to_list():
         task_id += 1
@@ -213,7 +254,10 @@ def get_task_id(df):
     return task_id
 
 
-def terminate_process(pid):
+def terminate_process(pid: int):
+    """
+    Function to terminate a process.
+    """
     try:
         parent = psutil.Process(pid)
         procs = parent.children(recursive=True)
@@ -226,4 +270,15 @@ def terminate_process(pid):
         parent.terminate()
         parent.kill()
     except psutil.NoSuchProcess:
-        st.write(f"Could not kill {pid}")
+        st.write(f"Process {pid} not found.")
+
+
+def get_stamp(x: str) -> Union[datetime, None]:
+    """
+    Return the timestamp for a process name.
+    """
+    file = f"{BASE_LOG_DIR}{x}.txt"
+    if os.path.isfile(file):
+        return datetime.fromtimestamp(os.path.getmtime(file))
+    else:
+        return None

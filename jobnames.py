@@ -592,6 +592,9 @@ right = [
 
 
 def get_job_name():
+    """
+    Return a random name by randomly selecting elements from the left and right list.
+    """
     job_name = random.choice(left) + "_" + random.choice(right)
 
     return job_name

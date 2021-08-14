@@ -1,11 +1,3 @@
-"""
-    picasso.design
-    ~~~~~~~~~~~~~~~~
-    globals for tasklit
-    :author: Maximilian Thomas Strauss, 2021
-    :copyright: Copyright (c) 2021 MTS
-"""
-
 from datetime import timedelta
 
 FORMAT = {
@@ -17,8 +9,6 @@ FORMAT = {
     "last update": [],
     "running": [],
 }
-
-task_names = ["Mimas", "Enceladus", "Tethys", "Dione", "Rhea", "Titan", "Iapetus"]
 
 time_values = {}
 time_values["Minutes"] = 59
