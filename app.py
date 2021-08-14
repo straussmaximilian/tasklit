@@ -11,7 +11,7 @@ import time
 import random
 import socket
 
-from globals import DATE_FORMAT, time_values, day_lookup, BASE_LOG_DIR
+from globals import FORMAT, DATE_FORMAT, time_values, day_lookup, BASE_LOG_DIR
 from utils import try_cmd, select_date, get_task_id, read_log, run_process, refresh
 from jobnames import get_job_name
 
