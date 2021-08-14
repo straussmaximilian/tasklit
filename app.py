@@ -11,9 +11,9 @@ import time
 import random
 import socket
 
-from globals import DATE_FORMAT, task_names, time_values, day_lookup, BASE_LOG_DIR
+from globals import DATE_FORMAT, time_values, day_lookup, BASE_LOG_DIR
 from utils import try_cmd, select_date, get_task_id, read_log, run_process, refresh
-
+from jobnames import get_job_name
 
 ## Main interface
 
@@ -51,7 +51,7 @@ if (len(df) > 0) and (df['running']==False).sum() > 0:
         raise st.script_runner.RerunException(st.script_request_queue.RerunData(None))
 
 with st.beta_expander('New task'):
-    job_name = st.text_input('Job name', random.choice(task_names))
+    job_name = st.text_input('Job name', get_job_name())
     command = st.text_input('Enter command','ping 8.8.8.8 -c 5')
 
     if (command != '') and st.button('Test command'):
