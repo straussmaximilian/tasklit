@@ -1,7 +1,7 @@
 # tasklit
 A leightweight task scheduling app build on streamlit.
 
-![Imgur](https://imgur.com/z3T8qJH)
+![Demo](demo.gif)
 
 ## usecase
 
