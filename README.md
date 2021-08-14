@@ -1,17 +1,20 @@
 # tasklit
-A leightweight task scheduling app build on streamlit.
-
+A browser-based task scheduling app build on streamlit.
 ![Demo](demo.gif)
 
-## usecase
+## How to use?
 
-For headless systems when being to lazy to write cronjobs.
+Too lazy to write cronjobs? Working on a headless system and want to have a GUI?
+`Tasklit` is a simple task scheduling application that allows you to schedule different processes via browser interface.
 
-### Example
-Consider you have a conda environment and want to run a python script.
+### Get started
+* install requirements (streamlit)
+* run the server `streamlit run app.py`
+* visit the website (default is `http://localhost:8501` or network ip)
+* Submit a new task. Example to run a test script on your desktop on a Mac system: `python \Users\username\Desktop\myscript.py`
 
-```
-python \Users\username\Desktop\myscript.py
-```
-## ideas
-* Notification settings (Email, Slack, Teams)
+## Limitations
+* Only task execution, no logic based on return values
+
+## Planned
+* Notifications (Email, Slack, Teams)
