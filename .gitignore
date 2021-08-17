@@ -136,5 +136,5 @@ dmypy.json
 .DS_Store
 
 # Application resources
-app/src/data.db
+app/data.db
 app/logs
