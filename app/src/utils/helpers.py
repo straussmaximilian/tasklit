@@ -76,8 +76,8 @@ def select_date():
     if frequency == "Daily":
         weekdays = col2.multiselect(
             "Select weekdays:",
-            options=["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
-            default=["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+            options=settings.DAYS,
+            default=settings.DAYS,
         )
     else:
         weekdays = None
