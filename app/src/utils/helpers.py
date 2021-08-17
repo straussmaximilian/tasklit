@@ -43,7 +43,7 @@ def try_cmd(command: str):
     The log file will be read and displayed via streamlit.
     """
     st.info(f"Running '{command}'")
-    with open(settings.DEFAULT_LOG_DIR_OUT, "wb") as out:
+    with open(settings.DEFAULT_LOG_DIR_OUT, "w+") as out:
         p = subprocess.Popen(command.split(" "), stdout=out, stderr=out)
     stdout = st.empty()
     stop = st.checkbox("Stop")
@@ -60,7 +60,7 @@ def select_date():
     Utility function to select scheduling information.
     """
 
-    col1, col2, col3 = st.beta_columns(3)
+    col1, col2, col3 = st.columns(3)
 
     frequency = col1.selectbox("Select Frequency", ("Once", "Interval", "Daily"))
 
@@ -82,7 +82,7 @@ def select_date():
     else:
         weekdays = None
 
-    c1, c2, c3 = st.beta_columns(3)
+    c1, c2, c3 = st.columns(3)
 
     execution = c1.selectbox("Execution", ("Now", "Scheduled"))
 

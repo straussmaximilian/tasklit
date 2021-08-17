@@ -22,5 +22,5 @@ DAY_LOOKUP = {i: _ for i, _ in enumerate(DAYS)}
 
 DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
 
-BASE_LOG_DIR = "./logs/"
+BASE_LOG_DIR = "./app/logs/"
 DEFAULT_LOG_DIR_OUT = f"{BASE_LOG_DIR}stdout.txt"

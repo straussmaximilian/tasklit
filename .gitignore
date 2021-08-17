@@ -134,3 +134,6 @@ dmypy.json
 
 # OS Stuff
 .DS_Store
+
+# Application resources
+app/src/data.db

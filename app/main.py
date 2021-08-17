@@ -18,11 +18,11 @@ from src.utils.helpers import (
     refresh,
     get_stamp,
 )
-from src.utils.jobnames import get_job_name
+from src.utils.job_names import get_job_name
 
 
 # Main interface
-engine = create_engine("sqlite:///data.db", echo=False)
+engine = create_engine("sqlite:///app/data.db", echo=False)
 
 st.write("# 🕙 Tasklit")
 st.text(f"A browser-based task scheduling system. Running on {socket.gethostname()}")

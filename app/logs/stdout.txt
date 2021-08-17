@@ -1,0 +1,7 @@
+Server:		192.168.178.1
+Address:	192.168.178.1#53
+
+Non-authoritative answer:
+Name:	google.com
+Address: 172.217.23.46
+
