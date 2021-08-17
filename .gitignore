@@ -137,3 +137,4 @@ dmypy.json
 
 # Application resources
 app/src/data.db
+app/logs
