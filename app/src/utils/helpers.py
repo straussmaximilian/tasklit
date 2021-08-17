@@ -1,21 +1,39 @@
-import streamlit as st
-import subprocess
-import psutil
-import pandas as pd
-import time
-from multiprocessing import Process
-from datetime import datetime
-from globals import (
-    DATE_FORMAT,
-    time_values,
-    day_lookup,
-    BASE_LOG_DIR,
-    DEFAULT_LOG_DIR_OUT,
-    date_translation,
-)
-import sqlalchemy
-from typing import Union
 import os
+import subprocess
+import sys
+import time
+
+from datetime import datetime, timedelta
+from multiprocessing import Process
+from typing import Union
+
+import pandas as pd
+import psutil
+import sqlalchemy
+import streamlit as st
+
+sys.path.append(os.path.dirname((os.path.dirname(os.path.dirname(os.path.dirname(__file__))))))
+
+import app.settings.consts as settings
+
+
+def terminate_process(pid: int):
+    """
+    Function to terminate a process.
+    """
+    try:
+        parent = psutil.Process(pid)
+        procs = parent.children(recursive=True)
+        for p in procs:
+            p.terminate()
+        gone, alive = psutil.wait_procs(procs, timeout=3)
+        for p in alive:
+            p.kill()
+
+        parent.terminate()
+        parent.kill()
+    except psutil.NoSuchProcess:
+        st.write(f"Process {pid} not found.")
 
 
 def try_cmd(command: str):
@@ -25,13 +43,13 @@ def try_cmd(command: str):
     The log file will be read and displayed via streamlit.
     """
     st.info(f"Running '{command}'")
-    with open(DEFAULT_LOG_DIR_OUT, "wb") as out:
+    with open(settings.DEFAULT_LOG_DIR_OUT, "wb") as out:
         p = subprocess.Popen(command.split(" "), stdout=out, stderr=out)
     stdout = st.empty()
     stop = st.checkbox("Stop")
     while True:
         poll = p.poll()
-        stdout.code("".join(read_log(DEFAULT_LOG_DIR_OUT)))
+        stdout.code("".join(read_log(settings.DEFAULT_LOG_DIR_OUT)))
         if stop or poll is not None:
             terminate_process(p.pid)
             break
@@ -49,7 +67,7 @@ def select_date():
     if frequency == "Interval":
         unit = col2.selectbox("Select Unit", ("Minutes", "Hours", "Days", "Weeks"))
         quantity = col3.slider(
-            f"Every x {unit}", min_value=1, max_value=time_values[unit]
+            f"Every x {unit}", min_value=1, max_value=settings.TIME_VALUES[unit]
         )
     else:
         unit = None
@@ -81,12 +99,12 @@ def select_date():
         td_ = time - datetime(2020, 1, 1, 00, 00, 00)
         start = date + td_
         if frequency == "Daily":
-            while day_lookup[start.weekday()] not in weekdays:
+            while settings.DAY_LOOKUP[start.weekday()] not in weekdays:
                 start += timedelta(days=1)
     else:
         start = datetime.now()
 
-    start_dt = start.strftime(DATE_FORMAT)
+    start_dt = start.strftime(settings.DATE_FORMAT)
     st.text(f"Scheduled first execution {start_dt}")
 
     return start, unit, quantity, weekdays, frequency, execution
@@ -96,7 +114,7 @@ def run_job(command: str, job_name: str) -> Process:
     """
     Starts a subprocess for a given command and logs to file.
     """
-    with open(f"{BASE_LOG_DIR}{job_name}_stdout.txt", "ab") as out:
+    with open(f"{settings.BASE_LOG_DIR}{job_name}_stdout.txt", "ab") as out:
         p = subprocess.Popen(command.split(" "), stdout=out, stderr=out)
         return p
 
@@ -119,7 +137,7 @@ def check_weekday(now: datetime, weekdays: list) -> bool:
     if weekdays is None:
         return True  # Always execute if this is none
     else:
-        if day_lookup[now.weekday()] in weekdays:
+        if settings.DAY_LOOKUP[now.weekday()] in weekdays:
             return True
         else:
             return False
@@ -129,9 +147,9 @@ def write_execution_log(job_name: str, command: str, now: datetime, msg: str):
     """
     Utility function to write execution time to log.
     """
-    now_str = now.strftime(DATE_FORMAT)
+    now_str = now.strftime(settings.DATE_FORMAT)
     for suffix in [".txt", "_stdout.txt"]:
-        with open(f"{BASE_LOG_DIR}{job_name}{suffix}", "a") as file:
+        with open(f"{settings.BASE_LOG_DIR}{job_name}{suffix}", "a") as file:
             if suffix == "_stdout.txt":
                 file.write(f"\n{'='*70} \n")
             file.write(f"{now_str} {msg} {command}\n")
@@ -146,7 +164,6 @@ def scheduler_process(
     weekdays: list,
     frequency: str,
     execution: str,
-    task_id: int,
 ):
     """
     Scheduling process.
@@ -159,9 +176,9 @@ def scheduler_process(
         p = run_job(command, job_name)
     else:
         if weekdays is not None:
-            timedelta = datetime.timedelta(days=1)
+            timedelta = timedelta(days=1)
         else:
-            timedelta = date_translation[unit] * quantity
+            timedelta = settings.DATE_TRANSLATION[unit] * quantity
 
         if execution == "Now":
             start -= timedelta
@@ -254,30 +271,11 @@ def get_task_id(df: pd.DataFrame) -> int:
     return task_id
 
 
-def terminate_process(pid: int):
-    """
-    Function to terminate a process.
-    """
-    try:
-        parent = psutil.Process(pid)
-        procs = parent.children(recursive=True)
-        for p in procs:
-            p.terminate()
-        gone, alive = psutil.wait_procs(procs, timeout=3)
-        for p in alive:
-            p.kill()
-
-        parent.terminate()
-        parent.kill()
-    except psutil.NoSuchProcess:
-        st.write(f"Process {pid} not found.")
-
-
 def get_stamp(x: str) -> Union[datetime, None]:
     """
     Return the timestamp for a process name.
     """
-    file = f"{BASE_LOG_DIR}{x}.txt"
+    file = f"{settings.BASE_LOG_DIR}{x}.txt"
     if os.path.isfile(file):
         return datetime.fromtimestamp(os.path.getmtime(file))
     else:

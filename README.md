@@ -1,6 +1,6 @@
 # tasklit
 A browser-based task scheduling app build on streamlit.
-![Demo](demo.gif)
+![Demo](assets/demo.gif)
 
 ## How to use?
 
@@ -18,3 +18,8 @@ Too lazy to write cronjobs? Working on a headless system and want to have a GUI?
 
 ## Planned
 * Notifications (Email, Slack, Teams)
+
+## Tests
+* Run tests via
+  ```coverage run -m unittest discover tests```
+* Check test coverage via ```coverage report -m```

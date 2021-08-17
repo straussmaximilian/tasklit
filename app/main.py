@@ -1,18 +1,15 @@
-import streamlit as st
-from sqlalchemy import create_engine
-import pandas as pd
-import sqlite3
 import os
-import subprocess
-from datetime import datetime, timedelta
-import psutil
-
-import time
-import random
 import socket
 
-from globals import FORMAT, DATE_FORMAT, time_values, day_lookup, BASE_LOG_DIR
-from utils import (
+import pandas as pd
+import psutil
+import streamlit as st
+
+from sqlalchemy import create_engine
+
+import settings.consts as settings
+
+from src.utils.helpers import (
     try_cmd,
     select_date,
     get_task_id,
@@ -21,21 +18,20 @@ from utils import (
     refresh,
     get_stamp,
 )
-from jobnames import get_job_name
+from src.utils.jobnames import get_job_name
+
 
 # Main interface
-
 engine = create_engine("sqlite:///data.db", echo=False)
 
 st.write("# 🕙 Tasklit")
 st.text(f"A browser-based task scheduling system. Running on {socket.gethostname()}")
 
-#
 try:
     df = pd.read_sql_table("processes", con=engine)
     df["running"] = df["process id"].apply(lambda x: psutil.pid_exists(x))
 except ValueError:
-    df = pd.DataFrame(FORMAT)
+    df = pd.DataFrame(settings.FORMAT)
 
 try:
     df["last update"] = df["job name"].apply(lambda x: get_stamp(x))
@@ -50,7 +46,7 @@ if (len(df) > 0) and (df["running"] == False).sum() > 0:
         running.to_sql("processes", con=engine, if_exists="replace", index=False)
         raise st.script_runner.RerunException(st.script_request_queue.RerunData(None))
 
-with st.beta_expander("New task"):
+with st.expander("New task"):
     job_name = st.text_input("Job name", get_job_name())
     command = st.text_input("Enter command", "ping 8.8.8.8 -c 5")
 
@@ -81,7 +77,7 @@ with st.beta_expander("New task"):
 
         refresh(4)
 
-with st.beta_expander("Explore task"):
+with st.expander("Explore task"):
     t_id = st.selectbox("task_id", df["task_id"].unique())
 
     if t_id:
@@ -92,12 +88,12 @@ with st.beta_expander("Explore task"):
 
         st.write("## Task execution")
 
-        log_file = f"{BASE_LOG_DIR}{job_name}.txt"
+        log_file = f"{settings.BASE_LOG_DIR}{job_name}.txt"
         if os.path.isfile(log_file):
             st.code("".join(read_log(log_file)))
 
         st.write("## Stdout")
-        log_file = f"{BASE_LOG_DIR}{job_name}_stdout.txt"
+        log_file = f"{settings.BASE_LOG_DIR}{job_name}_stdout.txt"
         if os.path.isfile(log_file):
             st.code("".join(read_log(log_file)))
 
