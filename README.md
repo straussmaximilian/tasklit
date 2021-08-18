@@ -9,7 +9,7 @@ Too lazy to write cronjobs? Working on a headless system and want to have a GUI?
 
 ### Get started
 * install requirements (streamlit)
-* run the server `streamlit run app.py`
+* run the server `streamlit run app/main.py`
 * visit the website (default is `http://localhost:8501` or network ip)
 * Submit a new task. Example to run a test script on your desktop on a Mac system: `python \Users\username\Desktop\myscript.py`
 
