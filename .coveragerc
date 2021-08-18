@@ -1,0 +1,9 @@
+[run]
+omit = .env/*
+       *tests*
+       *__init__.py
+       .idea/*
+source = app
+
+[html]
+directory = tests/coverage/html_report/
