@@ -13,6 +13,7 @@ from src.utils.helpers import (
     try_cmd,
     select_date,
     get_task_id,
+    terminate_process,
     read_log,
     run_process,
     refresh,
@@ -29,7 +30,7 @@ st.text(f"A browser-based task scheduling system. Running on {socket.gethostname
 
 try:
     df = pd.read_sql_table("processes", con=engine)
-    df["running"] = df["process id"].apply(lambda x: psutil.pid_exists(x))
+    df["running"] = df["process id"].apply(lambda x: psutil.pid_exists(x) and psutil.Process(x).status() != 'zombie')
 except ValueError:
     df = pd.DataFrame(settings.FORMAT)
 
@@ -93,7 +94,7 @@ with st.expander("Explore task"):
             st.code("".join(read_log(log_file)))
 
         st.write("## Stdout")
-        log_file = f"{settings.BASE_LOG_DIR}{job_name}_stdout.txt"
+        log_file = f"{settings.BASE_LOG_DIR}/{job_name}_stdout.txt"
         if os.path.isfile(log_file):
             st.code("".join(read_log(log_file)))
 
@@ -102,7 +103,7 @@ with st.expander("Explore task"):
                 terminate_process(p_id)
 
                 st.success(
-                    f"Terminated task {job_name} with task_id {task_id} and process id {p_id}."
+                    f"Terminated task {job_name} with task_id {row['task_id']} and process id {p_id}."
                 )
 
                 refresh(4)

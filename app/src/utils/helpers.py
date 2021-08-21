@@ -1,10 +1,11 @@
-import os
+import os, signal
 import subprocess
 import sys
 import time
 
 from datetime import datetime, timedelta
 from multiprocessing import Process
+from pathlib import Path
 from typing import Union
 
 import pandas as pd
@@ -24,11 +25,13 @@ def terminate_process(pid: int):
     try:
         parent = psutil.Process(pid)
         procs = parent.children(recursive=True)
+
         for p in procs:
             p.terminate()
+
         gone, alive = psutil.wait_procs(procs, timeout=3)
         for p in alive:
-            p.kill()
+            p.terminate()
 
         parent.terminate()
         parent.kill()
@@ -43,7 +46,11 @@ def try_cmd(command: str):
     The log file will be read and displayed via streamlit.
     """
     st.info(f"Running '{command}'")
-    with open(settings.DEFAULT_LOG_DIR_OUT, "w+") as out:
+
+    if not os.path.exists(settings.BASE_LOG_DIR):
+        Path(settings.BASE_LOG_DIR).mkdir(parents=True, exist_ok=True)
+
+    with open(settings.DEFAULT_LOG_DIR_OUT, "w") as out:
         p = subprocess.Popen(command.split(" "), stdout=out, stderr=out)
     stdout = st.empty()
     stop = st.checkbox("Stop")
@@ -114,7 +121,7 @@ def run_job(command: str, job_name: str) -> Process:
     """
     Starts a subprocess for a given command and logs to file.
     """
-    with open(f"{settings.BASE_LOG_DIR}{job_name}_stdout.txt", "ab") as out:
+    with open(f"{settings.BASE_LOG_DIR}/{job_name}_stdout.txt", "ab") as out:
         p = subprocess.Popen(command.split(" "), stdout=out, stderr=out)
         return p
 
@@ -149,7 +156,7 @@ def write_execution_log(job_name: str, command: str, now: datetime, msg: str):
     """
     now_str = now.strftime(settings.DATE_FORMAT)
     for suffix in [".txt", "_stdout.txt"]:
-        with open(f"{settings.BASE_LOG_DIR}{job_name}{suffix}", "a") as file:
+        with open(f"{settings.BASE_LOG_DIR}/{job_name}{suffix}", "a") as file:
             if suffix == "_stdout.txt":
                 file.write(f"\n{'='*70} \n")
             file.write(f"{now_str} {msg} {command}\n")
@@ -222,8 +229,7 @@ def run_process(
             quantity,
             weekdays,
             frequency,
-            execution,
-            task_id,
+            execution
         ),
     )
     p.start()
@@ -275,7 +281,7 @@ def get_stamp(x: str) -> Union[datetime, None]:
     """
     Return the timestamp for a process name.
     """
-    file = f"{settings.BASE_LOG_DIR}{x}.txt"
+    file = f"{settings.BASE_LOG_DIR}/{x}.txt"
     if os.path.isfile(file):
         return datetime.fromtimestamp(os.path.getmtime(file))
     else:
