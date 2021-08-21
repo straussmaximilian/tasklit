@@ -6,6 +6,7 @@ import time
 from datetime import datetime, timedelta
 from multiprocessing import Process
 from pathlib import Path
+from typing import List
 
 import pandas as pd
 import psutil
@@ -256,13 +257,24 @@ def write_st_log(file: str):
         st.code("".join(log))
 
 
-def read_log(file: str) -> list:
+def read_log(filename: str) -> List[str]:
     """
     Utility function to read a logfile.
+
+    Args:
+        filename: name of the log file to be read.
+
+    Raises:
+        FileNotFoundError if respective log file is missing.
+
+    Returns:
+        list of strings, with each string representing a line.
     """
-    with open(file, "r", encoding="utf-8") as reader:
-        log = reader.readlines()
-        return log
+    try:
+        with open(filename, "r", encoding="utf-8") as reader:
+            return reader.readlines()
+    except FileNotFoundError:
+        raise FileNotFoundError(f"Log file {filename} is missing.")
 
 
 def get_task_id(df: pd.DataFrame) -> int:
