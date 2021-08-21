@@ -18,7 +18,7 @@ sys.path.append(os.path.dirname((os.path.dirname(os.path.dirname(os.path.dirname
 import app.settings.consts as settings
 
 
-def terminate_process(pid: int):
+def terminate_process(pid: int) -> None:
     """
     Function to terminate a process.
     """
@@ -246,15 +246,6 @@ def run_process(
     )
     df.to_sql("processes", con=engine, if_exists="append", index=False)
     # FORMAT = {'task_id':[],'created':[], 'process id' : [], 'job name': [], 'command': [], 'last update': [], 'running': []}
-
-
-def write_st_log(file: str):
-    """
-    Utility function to read a logfile and print in streamlit.
-    """
-    with open(file, "r", encoding="utf-8") as reader:
-        log = reader.readlines()
-        st.code("".join(log))
 
 
 def read_log(filename: str) -> List[str]:

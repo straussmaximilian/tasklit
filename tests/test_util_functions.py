@@ -22,6 +22,7 @@ class UtilFunctionsTestCase(unittest.TestCase):
         cls.test_log_filename = "sample_logfile.txt"
         cls.log_readlines_output = ["Line of text"]
         cls.test_job_name = "infallible_strauss"
+        cls.test_process_id = 12345
         cls.task_ids = [1]
         cls.test_df = pd.DataFrame(
             {
@@ -83,6 +84,28 @@ class UtilFunctionsTestCase(unittest.TestCase):
             mock_open_raises.side_effect = FileNotFoundError
             with self.assertRaises(FileNotFoundError):
                 self.assertEqual(read_log(self.test_log_filename), self.log_readlines_output)
+
+    @patch('psutil.wait_procs')
+    @patch.object(psutil.Process, 'kill')
+    @patch.object(psutil.Process, 'terminate')
+    @patch('psutil.Process')
+    def test_terminate_process(self,
+                               mock_psutil_process: MagicMock,
+                               mock_psutil_terminate: MagicMock,
+                               mock_psutil_kill: MagicMock,
+                               mock_wait_procs: MagicMock):
+        # Case 1: Process doesn't have any child processes
+        mock_psutil_process.return_value = MagicMock()
+        mock_psutil_process.children.return_value = []
+        mock_wait_procs.return_value = ([], [])
+        mock_psutil_terminate.terminate.return_value = True
+        mock_psutil_kill.kill.return_value = True
+
+        terminate_process(self.test_process_id)
+
+        mock_psutil_terminate.assert_called()
+        mock_psutil_kill.assert_called()
+
 
 
 
