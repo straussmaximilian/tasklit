@@ -17,7 +17,7 @@ from src.utils.helpers import (
     read_log,
     run_process,
     refresh,
-    get_stamp,
+    check_last_process_info_update,
 )
 from src.utils.job_names import get_job_name
 
@@ -35,7 +35,7 @@ except ValueError:
     df = pd.DataFrame(settings.FORMAT)
 
 try:
-    df["last update"] = df["job name"].apply(lambda x: get_stamp(x))
+    df["last update"] = df["job name"].apply(lambda x: check_last_process_info_update(x))
 except ValueError:
     pass
 

@@ -1,4 +1,4 @@
-import os, signal
+import os
 import subprocess
 import sys
 import time
@@ -6,7 +6,6 @@ import time
 from datetime import datetime, timedelta
 from multiprocessing import Process
 from pathlib import Path
-from typing import Union
 
 import pandas as pd
 import psutil
@@ -268,21 +267,37 @@ def read_log(file: str) -> list:
 
 def get_task_id(df: pd.DataFrame) -> int:
     """
-    Returns a unique task_id based on existing task ids.
-    """
-    task_id = 1
-    while task_id in df["task_id"].to_list():
-        task_id += 1
+    Generate an ID for a new task:
+        -> check for the last used ID
+        -> increment by 1
 
-    return task_id
+    Args:
+        df: dataframe with process information and related task IDs.
+
+    Returns:
+        int: new task ID.
+    """
+    return df["task_id"].max() + 1
 
 
-def get_stamp(x: str) -> Union[datetime, None]:
+def check_last_process_info_update(job_name: str) -> datetime:
     """
-    Return the timestamp for a process name.
+    Use 'last modified' timestamp of the job log file to check
+    when job and related process information has been updated last.
+
+    Args:
+        job_name: name of the job for which to perform the check.
+
+    Raises:
+        OSError if the file does not exist or is inaccessible.
+        OSError is raised by os.path.getmtime.
+
+    Returns:
+        datetime: last modified timestamp.
     """
-    file = f"{settings.BASE_LOG_DIR}/{x}.txt"
-    if os.path.isfile(file):
-        return datetime.fromtimestamp(os.path.getmtime(file))
-    else:
-        return None
+    filename = f"{settings.BASE_LOG_DIR}/{job_name}.txt"
+
+    try:
+        return datetime.fromtimestamp(os.path.getmtime(filename))
+    except OSError as exc:
+        raise OSError(f"Processing log file {filename} caused {exc}.")
