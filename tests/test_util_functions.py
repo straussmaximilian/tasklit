@@ -7,9 +7,6 @@ from unittest.mock import (
     MagicMock
 )
 
-import pandas as pd
-import psutil
-
 from streamlit.script_runner import RerunException
 
 from app.src.utils.helpers import *
@@ -40,6 +37,7 @@ class UtilFunctionsTestCase(unittest.TestCase):
                 "running": [None],
             }
         )
+        cls.test_command = "ping 8.8.8.8 -c 5"
 
     def test_get_task_id(self):
         """
@@ -268,6 +266,30 @@ class UtilFunctionsTestCase(unittest.TestCase):
             mock_st_empty.assert_not_called()
             mock_sleep.assert_not_called()
             mock_rerun_data.assert_called()
+
+    @patch('app.src.utils.helpers.Popen')
+    def test_run_job(self,
+                     mock_popen: MagicMock):
+        """
+        GIVEN a command to execute and a respective job name
+        WHEN passed to the 'run_job' function
+        THEN check that correct object type is returned
+        or an error is raised in case lof file is inaccessible.
+        """
+        # Case 1: No error is raised, subprocess is returned.
+        mock_popen.return_value = MagicMock()
+        with patch('builtins.open', mock_open(read_data=self.test_command)):
+            self.assertEqual(
+                run_job(self.test_command, self.test_job_name),
+                mock_popen.return_value
+            )
+
+        # Case 2: log file access fails and OSError is raised.
+        mock_popen.side_effect = OSError("File creation failed.")
+        with self.assertRaises(OSError):
+            run_job(self.test_command, self.test_job_name)
+
+
 
 
 

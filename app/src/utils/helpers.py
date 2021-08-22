@@ -1,11 +1,11 @@
 import os
-import subprocess
 import sys
 import time
 
 from datetime import datetime, timedelta
 from multiprocessing import Process
 from pathlib import Path
+from subprocess import Popen
 from typing import List, Union
 
 import pandas as pd
@@ -67,7 +67,7 @@ def try_cmd(command: str):
         Path(settings.BASE_LOG_DIR).mkdir(parents=True, exist_ok=True)
 
     with open(settings.DEFAULT_LOG_DIR_OUT, "w") as out:
-        p = subprocess.Popen(command.split(" "), stdout=out, stderr=out)
+        p = Popen(command.split(" "), stdout=out, stderr=out)
     stdout = st.empty()
     stop = st.checkbox("Stop")
     while True:
@@ -133,13 +133,28 @@ def select_date():
     return start, unit, quantity, weekdays, frequency, execution
 
 
-def run_job(command: str, job_name: str) -> Process:
+def run_job(command: str, job_name: str) -> Popen:
     """
-    Starts a subprocess for a given command and logs to file.
+    Start a subprocess for a given command and save
+    'stdout' and 'stderr' logs to a respective log file.
+
+    Args:
+        command: command to be executed.
+        job_name: name of the job to be used for log file creation.
+
+    Raises:
+        OSError if log file cannot be created.
+
+    Returns:
+        a child process running the given command.
     """
-    with open(f"{settings.BASE_LOG_DIR}/{job_name}_stdout.txt", "ab") as out:
-        p = subprocess.Popen(command.split(" "), stdout=out, stderr=out)
-        return p
+    filename = f"{settings.BASE_LOG_DIR}/{job_name}_stdout.txt"
+
+    try:
+        with open(filename, "ab") as out:
+            return Popen(command.split(" "), stdout=out, stderr=out)
+    except OSError:
+        raise OSError(f"Failed to create the log file: {filename}.")
 
 
 def refresh_app(to_wait: int = 0) -> None:
