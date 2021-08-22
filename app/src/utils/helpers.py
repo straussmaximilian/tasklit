@@ -6,7 +6,7 @@ import time
 from datetime import datetime, timedelta
 from multiprocessing import Process
 from pathlib import Path
-from typing import List
+from typing import List, Union
 
 import pandas as pd
 import psutil
@@ -99,8 +99,8 @@ def select_date():
     if frequency == "Daily":
         weekdays = col2.multiselect(
             "Select weekdays:",
-            options=settings.DAYS,
-            default=settings.DAYS,
+            options=list(settings.WEEK_DAYS.values()),
+            default=list(settings.WEEK_DAYS.values()),
         )
     else:
         weekdays = None
@@ -122,7 +122,7 @@ def select_date():
         td_ = time - datetime(2020, 1, 1, 00, 00, 00)
         start = date + td_
         if frequency == "Daily":
-            while settings.DAY_LOOKUP[start.weekday()] not in weekdays:
+            while settings.WEEK_DAYS[start.weekday()] not in weekdays:
                 start += timedelta(days=1)
     else:
         start = datetime.now()
@@ -148,22 +148,33 @@ def refresh(to_wait: int):
     """
     ref = st.empty()
     for i in range(to_wait):
-        ref.write(f"Refreshing in {to_wait-i} s")
+        ref.write(f"Refreshing in {to_wait - i} s")
         time.sleep(1)
     raise st.script_runner.RerunException(st.script_request_queue.RerunData(None))
 
 
-def check_weekday(now: datetime, weekdays: list) -> bool:
+def function_should_execute(now: datetime,
+                            weekdays: Union[List[str], None]) -> bool:
     """
-    Check if function should be executed based on the weekday
+    Determine if 'today' is the day when a function must be executed.
+
+    Args:
+        now: datetime object representing current timestamp.
+        weekdays: list of ints from 0 to 6 corresponding to different days of the week,
+            e.g. 0 for Monday, etc.
+
+    Returns:
+        True/False depending on the check..
     """
-    if weekdays is None:
-        return True  # Always execute if this is none
-    else:
-        if settings.DAY_LOOKUP[now.weekday()] in weekdays:
+    today = now.weekday()
+
+    try:
+        if not weekdays or settings.WEEK_DAYS[today] in weekdays:
             return True
-        else:
-            return False
+    except KeyError:
+        raise KeyError(f"Failed to map {today} to a corresponding week day.")
+
+    return False
 
 
 def write_execution_log(job_name: str, command: str, now: datetime, msg: str):
@@ -174,19 +185,19 @@ def write_execution_log(job_name: str, command: str, now: datetime, msg: str):
     for suffix in [".txt", "_stdout.txt"]:
         with open(f"{settings.BASE_LOG_DIR}/{job_name}{suffix}", "a") as file:
             if suffix == "_stdout.txt":
-                file.write(f"\n{'='*70} \n")
+                file.write(f"\n{'=' * 70} \n")
             file.write(f"{now_str} {msg} {command}\n")
 
 
 def scheduler_process(
-    command: str,
-    job_name: str,
-    start: datetime,
-    unit: str,
-    quantity: int,
-    weekdays: list,
-    frequency: str,
-    execution: str,
+        command: str,
+        job_name: str,
+        start: datetime,
+        unit: str,
+        quantity: int,
+        weekdays: list,
+        frequency: str,
+        execution: str,
 ):
     """
     Scheduling process.
@@ -208,7 +219,7 @@ def scheduler_process(
 
         while True:
             now = datetime.now()
-            if check_weekday(now, weekdays) and (now > (start + timedelta)):
+            if function_should_execute(now, weekdays) and (now > (start + timedelta)):
                 # Write Execution
                 write_execution_log(job_name, command, now, "Executed")
                 p = run_job(command, job_name)
@@ -219,18 +230,17 @@ def scheduler_process(
 
 
 def run_process(
-    command: str,
-    job_name: str,
-    start: datetime,
-    unit: str,
-    quantity: int,
-    weekdays: list,
-    frequency: str,
-    execution: str,
-    task_id: int,
-    engine: sqlalchemy.engine.base.Engine,
+        command: str,
+        job_name: str,
+        start: datetime,
+        unit: str,
+        quantity: int,
+        weekdays: list,
+        frequency: str,
+        execution: str,
+        task_id: int,
+        engine: sqlalchemy.engine.base.Engine,
 ):
-
     # st.write(command, job_name, start, unit, quantity, weekdays, frequency, task_id)
     created = datetime.now()  # .strftime("%d_%m_%Y %H:%M:%S")
     # FORMAT = {'created':[], 'process id' : [], 'job name': [], 'command': [], 'last update': [], 'running': []}
