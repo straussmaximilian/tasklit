@@ -279,18 +279,17 @@ class UtilFunctionsTestCase(unittest.TestCase):
         or an error is raised in case lof file is inaccessible.
         """
         # Case 1: No error is raised, subprocess is returned.
-        test_file_path = "path/to/file"
         mock_popen.return_value = MagicMock()
         with patch('builtins.open', mock_open(read_data=self.test_command)):
             self.assertEqual(
-                launch_command_process(self.test_command, test_file_path),
+                launch_command_process(self.test_command, self.test_log_filename),
                 mock_popen.return_value
             )
 
         # Case 2: log file access fails and OSError is raised.
         mock_popen.side_effect = OSError("File creation failed.")
         with self.assertRaises(OSError):
-            launch_command_process(self.test_command, test_file_path)
+            launch_command_process(self.test_command, self.test_log_filename)
 
     def test_write_job_execution_log(self):
         pass

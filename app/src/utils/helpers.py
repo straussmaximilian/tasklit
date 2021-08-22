@@ -12,6 +12,8 @@ import pandas as pd
 import psutil
 import streamlit as st
 
+from sqlalchemy.exc import OperationalError
+
 sys.path.append(os.path.dirname((os.path.dirname(os.path.dirname(os.path.dirname(__file__))))))
 
 import app.settings.consts as settings
@@ -23,6 +25,7 @@ def app_exception_handler(func):
             func(*args, **kwargs)
         except Exception as exc:
             st.error(f"An error was caught: {exc}")
+            refresh_app(5)
     return inner
 
 
@@ -233,7 +236,7 @@ def write_job_execution_log(job_name: str, command: str, now: datetime, msg: str
                     file.write(f"\n{'=' * 70} \n")
                 file.write(f"{now_str} {msg} {command}\n")
         except OSError:
-            raise OSError(f"")
+            raise
 
 
 def scheduler_process(
@@ -252,21 +255,22 @@ def scheduler_process(
     Executes command if date criterion is met.
     """
     filename = f"{settings.BASE_LOG_DIR}/{job_name}_stdout.txt"
+
     if frequency == "Once":
         write_job_execution_log(job_name, command, datetime.now(), "Executed")
         p = launch_command_process(command, filename)
     else:
         if weekdays is not None:
-            timedelta = timedelta(days=1)
+            t_delta = timedelta(days=1)
         else:
-            timedelta = settings.DATE_TRANSLATION[unit] * quantity
+            t_delta = settings.DATE_TRANSLATION[unit] * quantity
 
         if execution == "Now":
-            start -= timedelta
+            start -= t_delta
 
         while True:
             now = datetime.now()
-            if function_should_execute(now, weekdays) and (now > (start + timedelta)):
+            if function_should_execute(now, weekdays) and (now > (start + t_delta)):
                 # Write Execution
                 write_job_execution_log(job_name, command, now, "Executed")
                 p = launch_command_process(command, filename)
@@ -303,7 +307,10 @@ def create_process_info_dataframe(command, job_name, pid, task_id, engine):
         }
     )
 
-    df.to_sql("processes", con=engine, if_exists="append", index=False)
+    try:
+        df.to_sql("processes", con=engine, if_exists="append", index=False)
+    except OperationalError:
+        raise
 
 
 def run_process(command: str, job_name: str, start: datetime, unit: str,

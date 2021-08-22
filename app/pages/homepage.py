@@ -98,7 +98,7 @@ def homepage():
 
             st.write("## Task execution")
 
-            log_file = f"{settings.BASE_LOG_DIR}{job_name}.txt"
+            log_file = f"{settings.BASE_LOG_DIR}/{job_name}.txt"
             if os.path.isfile(log_file):
                 st.code("".join(read_log(log_file)))
 
