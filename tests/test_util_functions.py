@@ -204,14 +204,14 @@ class UtilFunctionsTestCase(unittest.TestCase):
         with patch('app.src.utils.helpers.datetime') as mock_datetime:
             for day_number, day in WEEK_DAYS.items():
                 mock_datetime.now.weekday.return_value = day_number
-                # Case 1: Check that function returns 'True' today is
-                # in the list of days of the week.
+                # Case 1: Check that the function returns 'True' if today is
+                # in the list of provided days of the week.
                 self.assertEqual(function_should_execute(
                     mock_datetime.now,
                     list(WEEK_DAYS.values())
                 ), True)
 
-                # Case 2: Check that function returns 'True' if a list of days
+                # Case 2: Check that the function returns 'True' if a list of days
                 # of the week has not been provided at all.
                 self.assertEqual(
                     function_should_execute(
@@ -219,15 +219,15 @@ class UtilFunctionsTestCase(unittest.TestCase):
                         []
                     ), True)
 
-                # Case 3: Check that function returns 'False' if today is not
-                # in the list of days of the week.
+                # Case 3: Check that the function returns 'False' if today is not
+                # in the list of provided days of the week.
                 self.assertEqual(
                     function_should_execute(
                         mock_datetime.now,
                         ["Uknown Day"]
                     ), False)
 
-                # Case 4: Check that a KeyError is raised if day number is missing
+                # Case 4: Check that a KeyError is raised if a day number is missing
                 # in the mapping of day numbers to days.
                 with patch('app.settings.consts.WEEK_DAYS') as mocked_weekdays:
                     mocked_weekdays.__getitem__.side_effect = KeyError("Failed to map the day.")
