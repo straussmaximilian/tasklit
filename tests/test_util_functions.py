@@ -1,12 +1,14 @@
 import unittest
 
 from unittest.mock import (
+    create_autospec,
     mock_open,
     patch,
     MagicMock
 )
 
 import pandas as pd
+import psutil
 
 from app.src.utils.helpers import *
 
@@ -39,7 +41,7 @@ class UtilFunctionsTestCase(unittest.TestCase):
     def test_get_task_id(self):
         """
         GIVEN a dataframe with process information and related task IDs
-        WHEN it is passed to the get_task_id function
+        WHEN it is passed to the 'get_task_id' function
         THEN check that the newly returned ID is equal to
         the largest ID in the list + 1.
         """
@@ -50,7 +52,7 @@ class UtilFunctionsTestCase(unittest.TestCase):
                                             mock_getmtime: MagicMock):
         """
         GIVEN a job name that corresponds to a job log file
-        WHEN it is passed to the check_last_process_info_update function
+        WHEN it is passed to the 'check_last_process_info_update' function
         THEN check that for correct outputs are produced.
         """
         # Case 1: file is present and getmtime does not raise OSError
@@ -74,7 +76,7 @@ class UtilFunctionsTestCase(unittest.TestCase):
     def test_read_log(self):
         """
         GIVEN a path to a file
-        WHEN it is passed to the read_log function
+        WHEN it is passed to 'read_log' function
         THEN check that the function  returns a list of lines from the file.
         """
         with patch('builtins.open', mock_open(read_data="Line of text")):
@@ -86,27 +88,103 @@ class UtilFunctionsTestCase(unittest.TestCase):
                 self.assertEqual(read_log(self.test_log_filename), self.log_readlines_output)
 
     @patch('psutil.wait_procs')
-    @patch.object(psutil.Process, 'kill')
-    @patch.object(psutil.Process, 'terminate')
-    @patch('psutil.Process')
-    def test_terminate_process(self,
-                               mock_psutil_process: MagicMock,
-                               mock_psutil_terminate: MagicMock,
-                               mock_psutil_kill: MagicMock,
-                               mock_wait_procs: MagicMock):
-        # Case 1: Process doesn't have any child processes
-        mock_psutil_process.return_value = MagicMock()
-        mock_psutil_process.children.return_value = []
+    def test_terminate_child_processes_processes_found(self,
+                                                       mock_wait_procs: MagicMock):
+        """
+        GIVEN an object of a parent process that has spawned child processes
+        WHEN it is passed to 'terminate_child_processes' function
+        THEN check that the related process termination methods are called.
+        """
+        parent_process = MagicMock()
+        parent_process.children.return_value = [
+            MagicMock(
+                name="Child Proc 1",
+                terminate=lambda: True
+            ),
+            MagicMock(
+                name="Child Proc 2",
+                terminate=lambda: True
+            )
+        ]
+        mock_wait_procs.return_value = ([], [
+            MagicMock(return_value=lambda: True),
+            MagicMock(return_value=lambda: True)
+        ])
+
+        # Check that process.terminate() is being called on child processes
+        for child_process in parent_process.children.return_value:
+            mock_terminate = create_autospec(child_process.teminate, return_value=True)
+            terminate_child_processes(parent_process)
+            mock_wait_procs.assert_called()
+            mock_terminate.assert_called()
+
+        # Check that process.terminate() is being called on any child processes
+        # that might have been left alive.
+        for alive_process in mock_wait_procs.return_value[1]:
+            mock_terminate = create_autospec(alive_process.terminate, return_value=True)
+            terminate_child_processes(parent_process)
+            mock_wait_procs.assert_called()
+            mock_terminate.assert_called()
+
+    @patch('psutil.wait_procs')
+    def test_terminate_child_processes_processes_not_found(self,
+                                                           mock_wait_procs: MagicMock):
+        """
+        GIVEN an object of a parent process that has NOT spawned child processes
+        WHEN it is passed to 'terminate_child_processes' function
+        THEN check that the related process termination methods are NOT called.
+        """
+        parent_process = MagicMock()
+        parent_process.children.return_value = []
         mock_wait_procs.return_value = ([], [])
-        mock_psutil_terminate.terminate.return_value = True
-        mock_psutil_kill.kill.return_value = True
 
-        terminate_process(self.test_process_id)
+        # Check that process.terminate() is not called
+        for child_process in parent_process.children.return_value:
+            mock_terminate = create_autospec(child_process.teminate, return_value=True)
+            terminate_child_processes(parent_process)
+            mock_wait_procs.assert_not_called()
+            mock_terminate.assert_not_called()
 
-        mock_psutil_terminate.assert_called()
-        mock_psutil_kill.assert_called()
+        # Check that process.terminate() is not called
+        for alive_process in mock_wait_procs.return_value[1]:
+            mock_terminate = create_autospec(alive_process.terminate, return_value=True)
+            terminate_child_processes(parent_process)
+            mock_wait_procs.assert_not_called()
+            mock_terminate.assert_not_called()
 
+    @patch('app.src.utils.helpers.terminate_child_processes')
+    def test_terminate_process_with_child_processes(self,
+                                                    mock_terminate_child_procs: MagicMock):
+        """
+        GIVEN an ID of an existing test process
+        WHEN it is passed to 'terminate_process' function
+        THEN check that the related process termination methods have been called.
+        """
+        with patch('app.src.utils.helpers.psutil.Process') as mock_psutil_process:
+            mock_psutil_process.return_value = MagicMock()
+            mock_terminate_child_procs.return_value = True
+            mock_psutil_process.terminate.return_value = lambda: True
+            mock_terminate = create_autospec(mock_psutil_process.terminate, return_value=True)
 
+            mock_psutil_process.kill.return_value = lambda: True
+            mock_kill = create_autospec(mock_psutil_process.kill, return_value=True)
+
+            terminate_process(self.test_process_id)
+
+            mock_terminate_child_procs.assert_called()
+            mock_terminate.assert_called()
+            mock_kill.assert_called()
+
+    def test_terminate_process_raises_error(self):
+        """
+        GIVEN an ID of a test process that does not exist
+        WHEN it is passed to 'terminate_process' function
+        THEN check that an error is raised.
+        """
+        with patch('app.src.utils.helpers.psutil.Process') as mock_psutil_process:
+            mock_psutil_process.side_effect = psutil.NoSuchProcess("Cannot find the process.")
+            with self.assertRaises(psutil.NoSuchProcess):
+                terminate_process(self.test_process_id)
 
 
 

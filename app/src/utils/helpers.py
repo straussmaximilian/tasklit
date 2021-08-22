@@ -18,25 +18,41 @@ sys.path.append(os.path.dirname((os.path.dirname(os.path.dirname(os.path.dirname
 import app.settings.consts as settings
 
 
+def terminate_child_processes(parent_process: psutil.Process) -> None:
+    """
+    Check for any child processes spawned by the parent process and
+    - if found - terminate them.
+
+    Args:
+        parent_process: parent process object.
+    """
+    if child_processes := parent_process.children(recursive=True):
+
+        for child_process in child_processes:
+            child_process.terminate()
+
+        gone, alive = psutil.wait_procs(child_processes, timeout=3)
+
+        for process in alive:
+            process.terminate()
+
+
 def terminate_process(pid: int) -> None:
     """
-    Function to terminate a process.
+    Terminate a running process and any child processes that
+    have been spawned by it.
+
+    Raises:
+        psutil.NoSuchProcess if related process cannot be found.
     """
     try:
         parent = psutil.Process(pid)
-        procs = parent.children(recursive=True)
-
-        for p in procs:
-            p.terminate()
-
-        gone, alive = psutil.wait_procs(procs, timeout=3)
-        for p in alive:
-            p.terminate()
-
+        terminate_child_processes(parent)
         parent.terminate()
         parent.kill()
     except psutil.NoSuchProcess:
         st.write(f"Process {pid} not found.")
+        raise psutil.NoSuchProcess(f"Process {pid} not found.")
 
 
 def try_cmd(command: str):
