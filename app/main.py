@@ -16,7 +16,7 @@ from src.utils.helpers import (
     terminate_process,
     read_log,
     run_process,
-    refresh,
+    refresh_app,
     check_last_process_info_update,
 )
 from src.utils.job_names import get_job_name
@@ -45,7 +45,8 @@ if (len(df) > 0) and (df["running"] == False).sum() > 0:
     if st.button("Remove processes that are not running."):
         running = df[df["running"]]
         running.to_sql("processes", con=engine, if_exists="replace", index=False)
-        raise st.script_runner.RerunException(st.script_request_queue.RerunData(None))
+
+        refresh_app()
 
 with st.expander("New task"):
     job_name = st.text_input("Job name", get_job_name())
@@ -76,7 +77,7 @@ with st.expander("New task"):
             f"Submitted task {job_name} with task_id {task_id} to execute {command}."
         )
 
-        refresh(4)
+        refresh_app(4)
 
 with st.expander("Explore task"):
     t_id = st.selectbox("task_id", df["task_id"].unique())
@@ -106,8 +107,8 @@ with st.expander("Explore task"):
                     f"Terminated task {job_name} with task_id {row['task_id']} and process id {p_id}."
                 )
 
-                refresh(4)
+                refresh_app(4)
 
 
 if st.button("Refresh"):
-    raise st.script_runner.RerunException(st.script_request_queue.RerunData(None))
+    refresh_app()

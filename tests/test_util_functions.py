@@ -1,4 +1,3 @@
-import random
 import unittest
 
 from unittest.mock import (
@@ -10,6 +9,8 @@ from unittest.mock import (
 
 import pandas as pd
 import psutil
+
+from streamlit.script_runner import RerunException
 
 from app.src.utils.helpers import *
 from app.settings.consts import WEEK_DAYS
@@ -198,7 +199,7 @@ class UtilFunctionsTestCase(unittest.TestCase):
     def test_check_weekday(self):
         """
         GIVEN a datetime object representing today's date
-        WHEN it is passed to 'function_should_execute' function
+        WHEN it is passed to the 'function_should_execute' function
         THEN check that correct decision is made.
         """
         with patch('app.src.utils.helpers.datetime') as mock_datetime:
@@ -236,3 +237,45 @@ class UtilFunctionsTestCase(unittest.TestCase):
                             mock_datetime.now,
                             list(WEEK_DAYS.values())
                         )
+
+    @patch('time.sleep')
+    @patch('app.src.utils.helpers.st.empty')
+    @patch('app.src.utils.helpers.st.script_request_queue.RerunData')
+    def test_refresh_app(self,
+                         mock_rerun_data: MagicMock,
+                         mock_st_empty: MagicMock,
+                         mock_sleep: MagicMock):
+        """
+        GIVEN an optional amount of time to wait in seconds
+        WHEN it is passed to the 'refresh_app' function
+        THEN check that respective Streamlit methods are called.
+        """
+        # Case 1: time to wait is provided, all of the methods are called.
+        mock_st_empty.write.return_value = True
+        mock_rerun_data.return_value = True
+
+        with self.assertRaises(RerunException):
+            refresh_app(5)
+
+            mock_st_empty.empty.write.assert_called()
+            mock_rerun_data.assert_called()
+            mock_sleep.assert_called()
+
+        # Case 2: time to wait is NOT provided, only exception is raised.
+        with self.assertRaises(RerunException):
+            refresh_app()
+
+            mock_st_empty.assert_not_called()
+            mock_sleep.assert_not_called()
+            mock_rerun_data.assert_called()
+
+
+
+
+
+
+
+
+
+
+

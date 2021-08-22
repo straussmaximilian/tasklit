@@ -142,14 +142,24 @@ def run_job(command: str, job_name: str) -> Process:
         return p
 
 
-def refresh(to_wait: int):
+def refresh_app(to_wait: int = 0) -> None:
     """
-    Utility function that waits for a given amount and then restarts streamlit.
+    (Optionally) wait for a given amount of time (in seconds)
+    and trigger Streamlit app refresh.
+
+    Args:
+        to_wait: integer indicating amount of seconds to wait.
+
+    Raises:
+        RerunException that stops and re-runs the app script.
     """
-    ref = st.empty()
-    for i in range(to_wait):
-        ref.write(f"Refreshing in {to_wait - i} s")
-        time.sleep(1)
+    if to_wait:
+        empty_slot = st.empty()
+
+        for i in range(to_wait):
+            empty_slot.write(f"Refreshing in {to_wait - i} seconds...")
+            time.sleep(1)
+
     raise st.script_runner.RerunException(st.script_request_queue.RerunData(None))
 
 
