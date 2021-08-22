@@ -10,12 +10,42 @@ from typing import List, Union
 
 import pandas as pd
 import psutil
-import sqlalchemy
 import streamlit as st
 
 sys.path.append(os.path.dirname((os.path.dirname(os.path.dirname(os.path.dirname(__file__))))))
 
 import app.settings.consts as settings
+
+
+def app_exception_handler(func):
+    def inner(*args, **kwargs):
+        try:
+            func(*args, **kwargs)
+        except Exception as exc:
+            st.error(f"An error was caught: {exc}")
+    return inner
+
+
+def launch_command_process(command: str, log_filepath: str) -> Popen:
+    """
+    Start a subprocess for a given command and save
+    'stdout' and 'stderr' logs to a respective log file.
+
+    Args:
+        command: command to be executed.
+        log_filepath: path to the respective log file.
+
+    Raises:
+        OSError if log file cannot be created.
+
+    Returns:
+        a child process running the given command.
+    """
+    try:
+        with open(log_filepath, "w") as out:
+            return Popen(command.split(" "), stdout=out, stderr=out)
+    except OSError:
+        raise
 
 
 def terminate_child_processes(parent_process: psutil.Process) -> None:
@@ -51,28 +81,31 @@ def terminate_process(pid: int) -> None:
         parent.terminate()
         parent.kill()
     except psutil.NoSuchProcess:
-        st.write(f"Process {pid} not found.")
-        raise psutil.NoSuchProcess(f"Process {pid} not found.")
+        raise
 
 
-def try_cmd(command: str):
+def create_folder_if_not_exists(folder_name):
+    if not os.path.exists(folder_name):
+        Path(folder_name).mkdir(parents=True, exist_ok=True)
+
+
+def test_command_run(command: str):
     """
     Utility function to test command line execution
     Will open a subprocess with the given command and log to a default file.
     The log file will be read and displayed via streamlit.
     """
-    st.info(f"Running '{command}'")
+    create_folder_if_not_exists(settings.BASE_LOG_DIR)
 
-    if not os.path.exists(settings.BASE_LOG_DIR):
-        Path(settings.BASE_LOG_DIR).mkdir(parents=True, exist_ok=True)
+    p = launch_command_process(command, settings.DEFAULT_LOG_DIR_OUT)
 
-    with open(settings.DEFAULT_LOG_DIR_OUT, "w") as out:
-        p = Popen(command.split(" "), stdout=out, stderr=out)
     stdout = st.empty()
     stop = st.checkbox("Stop")
+
     while True:
         poll = p.poll()
         stdout.code("".join(read_log(settings.DEFAULT_LOG_DIR_OUT)))
+
         if stop or poll is not None:
             terminate_process(p.pid)
             break
@@ -133,30 +166,6 @@ def select_date():
     return start, unit, quantity, weekdays, frequency, execution
 
 
-def run_job(command: str, job_name: str) -> Popen:
-    """
-    Start a subprocess for a given command and save
-    'stdout' and 'stderr' logs to a respective log file.
-
-    Args:
-        command: command to be executed.
-        job_name: name of the job to be used for log file creation.
-
-    Raises:
-        OSError if log file cannot be created.
-
-    Returns:
-        a child process running the given command.
-    """
-    filename = f"{settings.BASE_LOG_DIR}/{job_name}_stdout.txt"
-
-    try:
-        with open(filename, "ab") as out:
-            return Popen(command.split(" "), stdout=out, stderr=out)
-    except OSError:
-        raise OSError(f"Failed to create the log file: {filename}.")
-
-
 def refresh_app(to_wait: int = 0) -> None:
     """
     (Optionally) wait for a given amount of time (in seconds)
@@ -197,21 +206,34 @@ def function_should_execute(now: datetime,
         if not weekdays or settings.WEEK_DAYS[today] in weekdays:
             return True
     except KeyError:
-        raise KeyError(f"Failed to map {today} to a corresponding week day.")
+        raise
 
     return False
 
 
-def write_execution_log(job_name: str, command: str, now: datetime, msg: str):
+def write_job_execution_log(job_name: str, command: str, now: datetime, msg: str) -> None:
     """
-    Utility function to write execution time to log.
+    Save information on job execution to a log file.
+
+    Args:
+        job_name: name of the job for which to write the log.
+        command: command that was executed.
+        now: datetime object with current timestamp.
+        msg: message to be logged.
+
+    Raises:
+        OSError if log file creation fails.
     """
     now_str = now.strftime(settings.DATE_FORMAT)
+
     for suffix in [".txt", "_stdout.txt"]:
-        with open(f"{settings.BASE_LOG_DIR}/{job_name}{suffix}", "a") as file:
-            if suffix == "_stdout.txt":
-                file.write(f"\n{'=' * 70} \n")
-            file.write(f"{now_str} {msg} {command}\n")
+        try:
+            with open(f"{settings.BASE_LOG_DIR}/{job_name}{suffix}", "a") as file:
+                if suffix == "_stdout.txt":
+                    file.write(f"\n{'=' * 70} \n")
+                file.write(f"{now_str} {msg} {command}\n")
+        except OSError:
+            raise OSError(f"")
 
 
 def scheduler_process(
@@ -229,10 +251,10 @@ def scheduler_process(
     Creates an event loop that updates very second and checks for the date.
     Executes command if date criterion is met.
     """
-
+    filename = f"{settings.BASE_LOG_DIR}/{job_name}_stdout.txt"
     if frequency == "Once":
-        write_execution_log(job_name, command, datetime.now(), "Executed")
-        p = run_job(command, job_name)
+        write_job_execution_log(job_name, command, datetime.now(), "Executed")
+        p = launch_command_process(command, filename)
     else:
         if weekdays is not None:
             timedelta = timedelta(days=1)
@@ -246,8 +268,8 @@ def scheduler_process(
             now = datetime.now()
             if function_should_execute(now, weekdays) and (now > (start + timedelta)):
                 # Write Execution
-                write_execution_log(job_name, command, now, "Executed")
-                p = run_job(command, job_name)
+                write_job_execution_log(job_name, command, now, "Executed")
+                p = launch_command_process(command, filename)
                 p.wait()
                 start += timedelta
             else:
@@ -367,5 +389,5 @@ def check_last_process_info_update(job_name: str) -> datetime:
 
     try:
         return datetime.fromtimestamp(os.path.getmtime(filename))
-    except OSError as exc:
-        raise OSError(f"Processing log file {filename} caused {exc}.")
+    except OSError:
+        raise

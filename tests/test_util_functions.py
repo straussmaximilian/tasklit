@@ -196,7 +196,7 @@ class UtilFunctionsTestCase(unittest.TestCase):
             with self.assertRaises(psutil.NoSuchProcess):
                 terminate_process(self.test_process_id)
 
-    def test_check_weekday(self):
+    def test_function_should_execute(self):
         """
         GIVEN a datetime object representing today's date
         WHEN it is passed to the 'function_should_execute' function
@@ -270,8 +270,8 @@ class UtilFunctionsTestCase(unittest.TestCase):
             mock_rerun_data.assert_called()
 
     @patch('app.src.utils.helpers.Popen')
-    def test_run_job(self,
-                     mock_popen: MagicMock):
+    def test_launch_command_process(self,
+                                    mock_popen: MagicMock):
         """
         GIVEN a command to execute and a respective job name
         WHEN passed to the 'run_job' function
@@ -279,17 +279,21 @@ class UtilFunctionsTestCase(unittest.TestCase):
         or an error is raised in case lof file is inaccessible.
         """
         # Case 1: No error is raised, subprocess is returned.
+        test_file_path = "path/to/file"
         mock_popen.return_value = MagicMock()
         with patch('builtins.open', mock_open(read_data=self.test_command)):
             self.assertEqual(
-                run_job(self.test_command, self.test_job_name),
+                launch_command_process(self.test_command, test_file_path),
                 mock_popen.return_value
             )
 
         # Case 2: log file access fails and OSError is raised.
         mock_popen.side_effect = OSError("File creation failed.")
         with self.assertRaises(OSError):
-            run_job(self.test_command, self.test_job_name)
+            launch_command_process(self.test_command, test_file_path)
+
+    def test_write_job_execution_log(self):
+        pass
 
 
 
