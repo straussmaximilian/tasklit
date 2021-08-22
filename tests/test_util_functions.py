@@ -7,6 +7,8 @@ from unittest.mock import (
     MagicMock
 )
 
+import pandas as pd
+
 from streamlit.script_runner import RerunException
 
 from app.src.utils.helpers import *

@@ -254,23 +254,39 @@ def scheduler_process(
                 time.sleep(1)
 
 
-def run_process(
-        command: str,
-        job_name: str,
-        start: datetime,
-        unit: str,
-        quantity: int,
-        weekdays: list,
-        frequency: str,
-        execution: str,
-        task_id: int,
-        engine: sqlalchemy.engine.base.Engine,
-):
-    # st.write(command, job_name, start, unit, quantity, weekdays, frequency, task_id)
-    created = datetime.now()  # .strftime("%d_%m_%Y %H:%M:%S")
-    # FORMAT = {'created':[], 'process id' : [], 'job name': [], 'command': [], 'last update': [], 'running': []}
+def create_process_info_dataframe(command, job_name, pid, task_id, engine):
+    """
+    # FORMAT = {'task_id':[],'created':[], 'process id' : [], 'job name': [], 'command': [], 'last update': [], 'running': []}
+    Args:
+        command:
+        job_name:
+        pid:
+        task_id:
+        engine:
 
-    p = Process(
+    Returns:
+
+    """
+    created = datetime.now()
+
+    df = pd.DataFrame(
+        {
+            "task_id": [task_id],
+            "created": [created],
+            "process id": [pid],
+            "job name": [job_name],
+            "command": [command],
+            "last update": [None],
+            "running": [None],
+        }
+    )
+
+    df.to_sql("processes", con=engine, if_exists="append", index=False)
+
+
+def run_process(command: str, job_name: str, start: datetime, unit: str,
+                quantity: int, weekdays: list, frequency: str, execution: str):
+    process = Process(
         target=scheduler_process,
         args=(
             command,
@@ -281,22 +297,20 @@ def run_process(
             weekdays,
             frequency,
             execution
-        ),
+        )
     )
-    p.start()
-    df = pd.DataFrame(
-        {
-            "task_id": [task_id],
-            "created": [created],
-            "process id": [p.pid],
-            "job name": [job_name],
-            "command": [command],
-            "last update": [None],
-            "running": [None],
-        }
-    )
-    df.to_sql("processes", con=engine, if_exists="append", index=False)
-    # FORMAT = {'task_id':[],'created':[], 'process id' : [], 'job name': [], 'command': [], 'last update': [], 'running': []}
+
+    process.start()
+
+    return process.pid
+
+
+def submit_job(command, job_name, start, unit, quantity, weekdays,
+               frequency, execution, task_id, engine):
+    started_process_id = run_process(command, job_name, start, unit,
+                                     quantity, weekdays, frequency, execution)
+    create_process_info_dataframe(command, job_name, started_process_id,
+                                  task_id, engine)
 
 
 def read_log(filename: str) -> List[str]:

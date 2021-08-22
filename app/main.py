@@ -15,7 +15,7 @@ from src.utils.helpers import (
     get_task_id,
     terminate_process,
     read_log,
-    run_process,
+    submit_job,
     refresh_app,
     check_last_process_info_update,
 )
@@ -60,7 +60,7 @@ with st.expander("New task"):
     task_id = get_task_id(df)
 
     if st.button(f"Submit"):
-        p = run_process(
+        submit_job(
             command,
             job_name,
             start,
