@@ -77,7 +77,7 @@ class UtilFunctionsTestCase(unittest.TestCase):
     def test_read_log(self):
         """
         GIVEN a path to a file
-        WHEN it is passed to 'read_log' function
+        WHEN it is passed to the 'read_log' function
         THEN check that the function  returns a list of lines from the file.
         """
         with patch('builtins.open', mock_open(read_data="Line of text")):
@@ -93,7 +93,7 @@ class UtilFunctionsTestCase(unittest.TestCase):
                                                        mock_wait_procs: MagicMock):
         """
         GIVEN an object of a parent process that has spawned child processes
-        WHEN it is passed to 'terminate_child_processes' function
+        WHEN it is passed to the 'terminate_child_processes' function
         THEN check that the related process termination methods are called.
         """
         parent_process = MagicMock()
@@ -136,7 +136,7 @@ class UtilFunctionsTestCase(unittest.TestCase):
                                                            mock_wait_procs: MagicMock):
         """
         GIVEN an object of a parent process that has NOT spawned child processes
-        WHEN it is passed to 'terminate_child_processes' function
+        WHEN it is passed to the 'terminate_child_processes' function
         THEN check that the related process termination methods are NOT called.
         """
         parent_process = MagicMock()
@@ -166,7 +166,7 @@ class UtilFunctionsTestCase(unittest.TestCase):
                                                     mock_terminate_child_procs: MagicMock):
         """
         GIVEN an ID of an existing test process
-        WHEN it is passed to 'terminate_process' function
+        WHEN it is passed to the 'terminate_process' function
         THEN check that the related process termination methods have been called.
         """
         with patch('app.src.utils.helpers.psutil.Process') as mock_psutil_process:
@@ -187,7 +187,7 @@ class UtilFunctionsTestCase(unittest.TestCase):
     def test_terminate_process_raises_error(self):
         """
         GIVEN an ID of a test process that does not exist
-        WHEN it is passed to 'terminate_process' function
+        WHEN it is passed to the 'terminate_process' function
         THEN check that an error is raised.
         """
         with patch('app.src.utils.helpers.psutil.Process') as mock_psutil_process:
