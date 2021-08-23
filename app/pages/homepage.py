@@ -63,11 +63,13 @@ def homepage():
 
             test_command_run(command)
 
-        start, unit, quantity, weekdays, frequency, execution = select_date()
-
-        task_id = get_task_id(df)
-
         if st.button(f"Submit"):
+            # Moved date selection and task ID generation here ->
+            # otherwise this is calculated on each re-render, even if we don't launch a new task.
+            start, unit, quantity, weekdays, frequency, execution = select_date()
+
+            new_task_id = get_task_id(df)
+
             submit_job(
                 command,
                 job_name,
@@ -77,22 +79,22 @@ def homepage():
                 weekdays,
                 frequency,
                 execution,
-                task_id,
+                new_task_id,
                 engine,
             )
 
             st.success(
-                f"Submitted task {job_name} with task_id {task_id} to execute {command}."
+                f"Submitted task {job_name} with task_id {new_task_id} to execute {command}."
             )
 
             refresh_app(4)
 
     with st.expander("Explore task"):
-        t_id = st.selectbox("task_id", df["task_id"].unique())
+        explore_task_id = st.selectbox("task_id", df["task_id"].unique())
 
-        if t_id:
+        if explore_task_id:
 
-            row = df[df["task_id"] == t_id].iloc[0]
+            row = df[df["task_id"] == explore_task_id].iloc[0]
             job_name = row["job name"]
             p_id = row["process id"]
 

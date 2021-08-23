@@ -6,7 +6,11 @@ from datetime import datetime, timedelta
 from multiprocessing import Process
 from pathlib import Path
 from subprocess import Popen
-from typing import List, Union
+from typing import (
+    List,
+    Union,
+    Optional
+)
 
 import pandas as pd
 import psutil
@@ -24,8 +28,9 @@ def app_exception_handler(func):
         try:
             func(*args, **kwargs)
         except Exception as exc:
-            st.error(f"An error was caught: {exc}")
-            refresh_app(5)
+            # st.error(f"An error was caught: {exc}")
+            # refresh_app(5)
+            print(exc)
     return inner
 
 
@@ -261,16 +266,16 @@ def scheduler_process(
         p = launch_command_process(command, filename)
     else:
         if weekdays is not None:
-            t_delta = timedelta(days=1)
+            duration = timedelta(days=1)
         else:
-            t_delta = settings.DATE_TRANSLATION[unit] * quantity
+            duration = settings.DATE_TRANSLATION[unit] * quantity
 
         if execution == "Now":
-            start -= t_delta
+            start -= duration
 
         while True:
             now = datetime.now()
-            if function_should_execute(now, weekdays) and (now > (start + t_delta)):
+            if function_should_execute(now, weekdays) and (now > (start + duration)):
                 # Write Execution
                 write_job_execution_log(job_name, command, now, "Executed")
                 p = launch_command_process(command, filename)
@@ -294,6 +299,7 @@ def create_process_info_dataframe(command, job_name, pid, task_id, engine):
 
     """
     created = datetime.now()
+    print(task_id)
 
     df = pd.DataFrame(
         {
@@ -374,10 +380,10 @@ def get_task_id(df: pd.DataFrame) -> int:
     Returns:
         int: new task ID.
     """
-    return df["task_id"].max() + 1
+    return df["task_id"].max() + 1 if df["task_id"].values else 1
 
 
-def check_last_process_info_update(job_name: str) -> datetime:
+def check_last_process_info_update(job_name: str) -> Optional[datetime]:
     """
     Use 'last modified' timestamp of the job log file to check
     when job and related process information has been updated last.
@@ -397,4 +403,4 @@ def check_last_process_info_update(job_name: str) -> datetime:
     try:
         return datetime.fromtimestamp(os.path.getmtime(filename))
     except OSError:
-        raise
+        return None
