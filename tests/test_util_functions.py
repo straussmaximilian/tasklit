@@ -84,8 +84,9 @@ class UtilFunctionsTestCase(unittest.TestCase):
         WHEN it is passed to the 'read_log' function
         THEN check that the function  returns a list of lines from the file.
         """
-        with patch('builtins.open', mock_open(read_data="Line of text")):
+        with patch('builtins.open', mock_open(read_data="Line of text")) as mock_file:
             self.assertEqual(read_log(self.test_log_filename), self.log_readlines_output)
+            mock_file.assert_called_with(self.test_log_filename, 'r', encoding='utf-8')
 
         with patch('builtins.open') as mock_open_raises:
             mock_open_raises.side_effect = FileNotFoundError
@@ -283,16 +284,18 @@ class UtilFunctionsTestCase(unittest.TestCase):
         """
         # Case 1: No error is raised, subprocess is returned.
         mock_popen.return_value = MagicMock()
-        with patch('builtins.open', mock_open(read_data=self.test_command)):
+        with patch('builtins.open', mock_open(read_data=self.test_command)) as mock_file:
             self.assertEqual(
                 launch_command_process(self.test_command, self.test_log_filename),
                 mock_popen.return_value
             )
+            mock_file.assert_called_with(self.test_log_filename, 'w')
 
         # Case 2: log file access fails and OSError is raised.
         mock_popen.side_effect = OSError("File creation failed.")
-        with self.assertRaises(OSError):
-            launch_command_process(self.test_command, self.test_log_filename)
+        with patch('builtins.open', mock_open(read_data=self.test_command)):
+            with self.assertRaises(OSError):
+                launch_command_process(self.test_command, self.test_log_filename)
 
     def test_write_job_execution_log(self):
         pass
