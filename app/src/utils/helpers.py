@@ -91,36 +91,42 @@ def terminate_process(pid: int) -> None:
         raise
 
 
-def create_folder_if_not_exists(folder_name):
+def create_folder_if_not_exists(folder_name: str) -> None:
+    """
+    Check if a folder exists and create one if not.
+
+    Args:
+        folder_name: name of the folder to be checked.
+    """
     if not os.path.exists(folder_name):
         Path(folder_name).mkdir(parents=True, exist_ok=True)
 
 
-def test_command_run(command: str):
+def test_command_run(command: str) -> None:
     """
-    Utility function to test command line execution
-    Will open a subprocess with the given command and log to a default file.
-    The log file will be read and displayed via streamlit.
+    Utility function to test command execution. Open a subprocess with
+    the given command and log output to the default log file.
+    The log file will be read and displayed via Streamlit.
     """
     create_folder_if_not_exists(settings.BASE_LOG_DIR)
 
-    p = launch_command_process(command, settings.DEFAULT_LOG_DIR_OUT)
+    test_command_process = launch_command_process(command, settings.DEFAULT_LOG_DIR_OUT)
 
     stdout = st.empty()
     stop = st.checkbox("Stop")
 
     while True:
-        poll = p.poll()
+        poll = test_command_process.poll()
         stdout.code("".join(read_log(settings.DEFAULT_LOG_DIR_OUT)))
 
         if stop or poll is not None:
-            terminate_process(p.pid)
+            terminate_process(test_command_process.pid)
             break
 
 
-def select_date():
+def select_date() :
     """
-    Utility function to select scheduling information.
+    Get process scheduling information from UI inputs.
     """
 
     col1, col2, col3 = st.columns(3)
@@ -298,7 +304,6 @@ def create_process_info_dataframe(command, job_name, pid, task_id, engine):
 
     """
     created = datetime.now()
-    print(task_id)
 
     df = pd.DataFrame(
         {
@@ -364,7 +369,7 @@ def read_log(filename: str) -> List[str]:
         with open(filename, "r", encoding="utf-8") as reader:
             return reader.readlines()
     except FileNotFoundError:
-        raise FileNotFoundError(f"Log file {filename} is missing.")
+        raise
 
 
 def get_task_id(df: pd.DataFrame) -> int:
