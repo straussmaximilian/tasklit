@@ -28,9 +28,8 @@ def app_exception_handler(func):
         try:
             func(*args, **kwargs)
         except Exception as exc:
-            # st.error(f"An error was caught: {exc}")
-            # refresh_app(5)
-            print(exc)
+            st.error(f"An error was caught: {exc}")
+            refresh_app(5)
     return inner
 
 

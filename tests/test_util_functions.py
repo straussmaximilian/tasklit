@@ -70,10 +70,13 @@ class UtilFunctionsTestCase(unittest.TestCase):
             mock_getmtime.assert_called()
             mock_datetime.fromtimestamp.assert_called()
 
-        # Case 2: file operation fails -> OSError is raised
+        # Case 2: file operation fails ->
+        # OSError is raised, function returns None
         mock_getmtime.side_effect = OSError("Oopsy daisies")
-        with self.assertRaises(OSError):
-            check_last_process_info_update(self.test_job_name)
+        self.assertEqual(
+            check_last_process_info_update(self.test_job_name),
+            None
+        )
 
     def test_read_log(self):
         """
@@ -293,16 +296,3 @@ class UtilFunctionsTestCase(unittest.TestCase):
 
     def test_write_job_execution_log(self):
         pass
-
-
-
-
-
-
-
-
-
-
-
-
-
