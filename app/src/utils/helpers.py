@@ -7,7 +7,6 @@ from multiprocessing import Process
 from pathlib import Path
 from subprocess import Popen
 from typing import (
-    Any,
     List,
     Optional,
     Union,
@@ -18,7 +17,9 @@ import pandas as pd
 import psutil
 import streamlit as st
 
+from sqlalchemy import engine
 from sqlalchemy.exc import OperationalError
+from streamlit.delta_generator import DeltaGenerator
 
 sys.path.append(os.path.dirname((os.path.dirname(os.path.dirname(os.path.dirname(__file__))))))
 
@@ -123,136 +124,140 @@ def test_command_run(command: str) -> None:
 
         stdout.code("".join(read_log(settings.DEFAULT_LOG_DIR_OUT)))
 
-        # TODO: refactor this part. Why do we exit if process if process.poll()
-        #   is not none (meaning that the process is still running)?
         if stop or poll is not None:
             terminate_process(test_command_process.pid)
             break
 
 
-def get_execution_schedule():
-    pass
+def get_time_interval_info(unit_col: DeltaGenerator,
+                           slider_col: DeltaGenerator) -> Tuple[str, int]:
+    """
+    Get execution frequency information from UI inputs.
 
+    Args:
+        unit_col: Streamlit column with UI element to select the corresponding
+            execution time interval, e.g. 'minutes', 'hours', etc.
+        slider_col: Streamlit column with UI element to select the quantity
+            of execution time intervals.
 
-def get_interval_frequency(unit_column, slider_column):
-    unit = unit_column.selectbox("Select Unit", ("Minutes", "Hours", "Days", "Weeks"))
-    quantity = slider_column.slider(
-        f"Every x {unit}", min_value=1, max_value=settings.TIME_VALUES[unit]
+    Returns:
+        selected time interval and related execution frequency.
+    """
+    time_unit = unit_col.selectbox("Select Unit", ("Minutes", "Hours", "Days", "Weeks"))
+    time_unit_quantity = slider_col.slider(
+        f"Every x {time_unit}", min_value=1, max_value=settings.TIME_VALUES[time_unit]
     )
 
-    return unit, quantity
+    return time_unit, time_unit_quantity
 
 
-def get_daily_frequency(unit_select_column):
-    return unit_select_column.multiselect(
+def select_weekdays(unit_col: DeltaGenerator) -> List[str]:
+    """
+    Select weekdays on which the process must be executed.
+
+    Args:
+        unit_col: Streamlit column with UI multi-select element
+            to select appropriate weekdays.
+
+    Returns:
+        list strings representing selected weekdays.
+    """
+    return unit_col.multiselect(
         "Select weekdays:",
         options=list(settings.WEEK_DAYS.values()),
         default=list(settings.WEEK_DAYS.values()),
     )
 
 
-def get_command_execution_schedule():
-    unit = quantity = weekdays = None
+def get_execution_interval_information(
+        execution_frequency: str,
+        unit_col: DeltaGenerator,
+        slider_col: DeltaGenerator
+) -> Tuple[Optional[str], Optional[int], Optional[List[str]]]:
+    """
+    Get command execution interval information, including time interval (e.g. hours, weeks, etc.),
+    related quantity and execution weekdays.
 
-    # Get execution frequency settings
-    frequency_select_col, unit_select_col, slider_select_col = st.columns(3)
+    Args:
+        execution_frequency: string indicating execution frequency.
+        unit_col: Streamlit column with UI element to select the corresponding
+            execution time interval, e.g. 'minutes', 'hours', etc.
+        slider_col: Streamlit column with UI element to select the quantity
+            of execution time intervals.
 
-    frequency = frequency_select_col.selectbox(
-        "Select Frequency", (
-            settings.IMMEDIATE_FREQUENCY,
-            settings.INTERVAL_FREQUENCY,
-            settings.DAILY_FREQUENCY
-        )
+    Returns:
+        tuple with information about time interval, interval quantity and selected weekdays.
+    """
+    time_unit = time_unit_quantity = weekdays = None
+
+    if execution_frequency == "Interval":
+        time_unit, time_unit_quantity = get_time_interval_info(unit_col, slider_col)
+
+    if execution_frequency == "Daily":
+        weekdays = select_weekdays(unit_col)
+
+    return time_unit, time_unit_quantity, weekdays
+
+
+def calculate_execution_start(date_input_col: DeltaGenerator,
+                              time_slider_col: DeltaGenerator) -> datetime:
+    """
+    Calculate the start datetime of command execution.
+
+    Args:
+        date_input_col: Streamlit column with UI element to select execution date.
+        time_slider_col:  Streamlit column with UI (slider) element to select hr:min of execution.
+
+    Returns:
+        datetime object with the start date & time of execution.
+    """
+    input_date = date_input_col.date_input("Starting date", datetime.now())
+    selected_time = time_slider_col.slider(
+        "Timepoint",
+        min_value=datetime(2020, 1, 1, 00, 00),
+        max_value=datetime(2020, 1, 1, 23, 59),
+        value=datetime(2020, 1, 1, 12, 00),
+        format="HH:mm",
     )
 
-    if frequency == "Interval":
-        unit, quantity = get_interval_frequency(unit_select_col, slider_select_col)
+    execution_date = datetime(input_date.year, input_date.month, input_date.day)
+    time_difference = selected_time - datetime(2020, 1, 1, 00, 00, 00)
 
-    if frequency == "Daily":
-        weekdays = get_daily_frequency(unit_select_col)
+    return execution_date + time_difference
 
-    # Get execution schedule settings
-    execution_schedule_col, date_input_col, time_slider_col = st.columns(3)
 
-    execution = execution_schedule_col.selectbox("Execution", ("Now", "Scheduled"))
+def get_command_execution_start(
+        execution_type: str,
+        execution_frequency: str,
+        weekdays: Union[List[str], None],
+        date_col: DeltaGenerator,
+        slider_col: DeltaGenerator
+) -> datetime:
+    """
+    Get the start datetime of command execution.
 
+    Args:
+        execution_type: type of execution schedule: is execution "Scheduled" or not.
+        execution_frequency: frequency of execution: "Interval" / "Daily"
+        weekdays: optional list with selected weekdays.
+        date_col: Streamlit column with UI element to select execution date.
+        slider_col: Streamlit column with UI (slider) element to select hr:min of execution.
+
+    Returns:
+        datetime object with the start date & time of execution.
+    """
     start = datetime.now()
 
-    if execution == "Scheduled":
-        input_date = date_input_col.date_input("Starting date", datetime.now())
-        time = time_slider_col.slider(
-            "Timepoint",
-            min_value=datetime(2020, 1, 1, 00, 00),
-            max_value=datetime(2020, 1, 1, 23, 59),
-            value=datetime(2020, 1, 1, 12, 00),
-            format="HH:mm",
-        )
-        execution_date = datetime(input_date.year, input_date.month, input_date.day)
-        time_difference = time - datetime(2020, 1, 1, 00, 00, 00)
-        start = execution_date + time_difference
+    if execution_type == "Scheduled":
+        start = calculate_execution_start(date_col, slider_col)
 
-        if frequency == "Daily":
+        if execution_frequency == "Daily":
             while settings.WEEK_DAYS[start.weekday()] not in weekdays:
                 start += timedelta(days=1)
 
     st.text(f"First execution on {start.strftime(settings.DATE_FORMAT)}.")
 
-    return start, unit, quantity, weekdays, frequency, execution
-
-
-def select_date() -> Tuple[Union[datetime, Any], Optional[Any], Optional[Any], Optional[Any], Any, Any]:
-    """
-    Get process scheduling information from UI inputs.
-    """
-
-    col1, col2, col3 = st.columns(3)
-
-    frequency = col1.selectbox("Select Frequency", ("Once", "Interval", "Daily"))
-
-    if frequency == "Interval":
-        unit = col2.selectbox("Select Unit", ("Minutes", "Hours", "Days", "Weeks"))
-        quantity = col3.slider(
-            f"Every x {unit}", min_value=1, max_value=settings.TIME_VALUES[unit]
-        )
-    else:
-        unit = None
-        quantity = None
-
-    if frequency == "Daily":
-        weekdays = col2.multiselect(
-            "Select weekdays:",
-            options=list(settings.WEEK_DAYS.values()),
-            default=list(settings.WEEK_DAYS.values()),
-        )
-    else:
-        weekdays = None
-
-    c1, c2, c3 = st.columns(3)
-
-    execution = c1.selectbox("Execution", ("Now", "Scheduled"))
-
-    if execution == "Scheduled":
-        date = c2.date_input("Starting date", datetime.now())
-        time = c3.slider(
-            "Timepoint",
-            min_value=datetime(2020, 1, 1, 00, 00),
-            max_value=datetime(2020, 1, 1, 23, 59),
-            value=datetime(2020, 1, 1, 12, 00),
-            format="HH:mm",
-        )
-        date = datetime(date.year, date.month, date.day)
-        td_ = time - datetime(2020, 1, 1, 00, 00, 00)
-        start = date + td_
-        if frequency == "Daily":
-            while settings.WEEK_DAYS[start.weekday()] not in weekdays:
-                start += timedelta(days=1)
-    else:
-        start = datetime.now()
-
-    start_dt = start.strftime(settings.DATE_FORMAT)
-    st.text(f"Scheduled first execution {start_dt}")
-
-    return start, unit, quantity, weekdays, frequency, execution
+    return start
 
 
 def refresh_app(to_wait: int = 0) -> None:
@@ -273,11 +278,11 @@ def refresh_app(to_wait: int = 0) -> None:
             empty_slot.write(f"Refreshing in {to_wait - i} seconds...")
             time.sleep(1)
 
-    raise st.script_runner.RerunException(st.script_request_queue.RerunData(None))
+    raise st.script_runner.RerunException(st.script_request_queue.RerunData())
 
 
-def function_should_execute(now: datetime,
-                            weekdays: Union[List[str], None]) -> bool:
+def match_weekday(now: datetime,
+                  weekdays: Union[List[str], None]) -> bool:
     """
     Determine if 'today' is the day when a function must be executed.
 
@@ -298,6 +303,30 @@ def function_should_execute(now: datetime,
         raise
 
     return False
+
+
+def match_duration(now: datetime, start: datetime, duration: timedelta) -> bool:
+    """
+    Check whether the sum of process start date and interval timedelta is less
+    than current datetime. If yes -> process must be executed.
+
+    Args:
+        now: datetime.now() object.
+        start: datetime object with process start date.
+        duration: frequency timedelta to be
+
+    Returns:
+        True or False based on the result of the check.
+    """
+    return now > (start + duration)
+
+
+def function_should_execute(now: datetime,
+                            start: datetime,
+                            duration: timedelta,
+                            weekdays: Union[List[str], None]) -> bool:
+    return match_weekday(now, weekdays) and \
+           match_duration(now, start, duration)
 
 
 def write_job_execution_log(job_name: str, command: str, now: datetime, msg: str) -> None:
@@ -329,59 +358,79 @@ def scheduler_process(
         command: str,
         job_name: str,
         start: datetime,
-        unit: str,
-        quantity: int,
-        weekdays: list,
-        frequency: str,
-        execution: str,
-):
+        time_unit: str,
+        time_unit_quantity: int,
+        weekdays: Union[List[str], None],
+        execution_frequency: str,
+        execution_type: str,
+) -> None:
     """
-    Scheduling process.
-    Creates an event loop that updates very second and checks for the date.
-    Executes command if date criterion is met.
+    Create an event loop that handles process execution.
+    Checks for current date. If date criterion is met -> start the process with command execution.
+    Args:
+        command: command to be executed.
+        job_name: name allocated for the process job.
+        start: execution datetime.
+        time_unit: unit of execution time interval, e.g. 'hours', 'days', etc.
+        time_unit_quantity: amount of time interval units.
+        weekdays: optional list with selected weekdays.
+        execution_frequency: frequency of execution: "Interval" / "Daily"
+        execution_type: type of execution schedule: is execution "Scheduled" or not.
     """
     filename = f"{settings.BASE_LOG_DIR}/{job_name}_stdout.txt"
 
-    if frequency == "Once":
+    if execution_frequency == "Once":
+        launch_command_process(command, filename)
         write_job_execution_log(job_name, command, datetime.now(), "Executed")
-        p = launch_command_process(command, filename)
-    else:
-        if weekdays is not None:
-            duration = timedelta(days=1)
+        return
+
+    interval_duration = timedelta(days=1) if weekdays else settings.DATE_TRANSLATION[time_unit] * time_unit_quantity
+
+    # If process must be executed now, decrease start date by interval timedelta:
+    # this way 'match_duration' will return True in the function_should_execute check.
+    if execution_type == "Now":
+        start -= interval_duration
+
+    while True:
+        now = datetime.now()
+        if function_should_execute(now, start, interval_duration, weekdays):
+            write_job_execution_log(job_name, command, now, "Executed")
+            launched_process = launch_command_process(command, filename)
+            launched_process.wait()
+            start += interval_duration
         else:
-            duration = settings.DATE_TRANSLATION[unit] * quantity
-
-        if execution == "Now":
-            start -= duration
-
-        while True:
-            now = datetime.now()
-            if function_should_execute(now, weekdays) and (now > (start + duration)):
-                # Write Execution
-                write_job_execution_log(job_name, command, now, "Executed")
-                p = launch_command_process(command, filename)
-                p.wait()
-                start += timedelta
-            else:
-                time.sleep(1)
+            time.sleep(1)
 
 
-def create_process_info_dataframe(command, job_name, pid, task_id, engine):
+def create_process_info_dataframe(command: str,
+                                  job_name: str,
+                                  pid: int,
+                                  task_id: int) -> pd.DataFrame:
     """
-    # FORMAT = {'task_id':[],'created':[], 'process id' : [], 'job name': [], 'command': [], 'last update': [], 'running': []}
+    Generate a dataframe with process information in the following format:
+
+    {
+        'task_id': [],
+        'created': [],
+        'process id': [],
+        'job name': [],
+        'command': [],
+        'last update': [],
+        'running': []
+    }.
+
     Args:
-        command:
-        job_name:
-        pid:
-        task_id:
-        engine:
+        command: command executed by the process.
+        job_name: job name allocated for the process.
+        pid: process ID.
+        task_id: task ID.
 
     Returns:
-
+        pandas DF with process related information.
     """
     created = datetime.now()
 
-    df = pd.DataFrame(
+    return pd.DataFrame(
         {
             "task_id": [task_id],
             "created": [created],
@@ -393,25 +442,54 @@ def create_process_info_dataframe(command, job_name, pid, task_id, engine):
         }
     )
 
+
+def save_df_to_sql(df: pd.DataFrame, sql_engine: engine) -> None:
+    """
+    Save dataframe with process information to a local sql alchemy DB file.
+
+    Args:
+        df: process information df.
+        sql_engine: sql alchemy engine to use.
+
+    Raises:
+        OperationalError: if any sqlalchemy errors have been thrown.
+    """
     try:
-        df.to_sql("processes", con=engine, if_exists="append", index=False)
+        df.to_sql("processes", con=sql_engine, if_exists="append", index=False)
     except OperationalError:
         raise
 
 
-def run_process(command: str, job_name: str, start: datetime, unit: str,
-                quantity: int, weekdays: list, frequency: str, execution: str):
+def start_process(command: str, job_name: str, start: datetime,
+                  time_unit: str, time_unit_quantity: int, weekdays: Union[List[str], None],
+                  execution_frequency: str, execution_type: str) -> int:
+    """
+    Run a process with the selected parameters.
+
+    Args:
+        command: command to be executed.
+        job_name: name allocated for the process job.
+        start: execution datetime.
+        time_unit: unit of execution time interval, e.g. 'hours', 'days', etc.
+        time_unit_quantity: amount of time interval units.
+        weekdays: optional list with selected weekdays.
+        execution_frequency: frequency of execution: "Interval" / "Daily"
+        execution_type: type of execution schedule: is execution "Scheduled" or not.
+
+    Returns:
+        ID of the started process.
+    """
     process = Process(
         target=scheduler_process,
         args=(
             command,
             job_name,
             start,
-            unit,
-            quantity,
+            time_unit,
+            time_unit_quantity,
             weekdays,
-            frequency,
-            execution
+            execution_frequency,
+            execution_type
         )
     )
 
@@ -420,12 +498,29 @@ def run_process(command: str, job_name: str, start: datetime, unit: str,
     return process.pid
 
 
-def submit_job(command, job_name, start, unit, quantity, weekdays,
-               frequency, execution, task_id, engine):
-    started_process_id = run_process(command, job_name, start, unit,
-                                     quantity, weekdays, frequency, execution)
-    create_process_info_dataframe(command, job_name, started_process_id,
-                                  task_id, engine)
+def submit_job(command: str, job_name: str, start: datetime,
+               time_unit: str, time_unit_quantity: int, weekdays: Union[List[str], None],
+               execution_frequency: str, execution_type: str, task_id: int,
+               sql_engine: engine) -> None:
+    """
+    Run a process job and save related process information to an SQL alchemy file.
+
+    Args:
+        command: command executed by the process.
+        job_name: job name allocated for the process.
+        start: start date of the job.
+        time_unit: unit of execution time interval, e.g. 'hours', 'days', etc.
+        time_unit_quantity: amount of time interval units.
+        weekdays: optional list with selected weekdays.
+        execution_frequency: frequency of execution: "Interval" / "Daily"
+        execution_type: type of execution schedule: is execution "Scheduled" or not.
+        task_id: task ID.
+        sql_engine: sql engine to use for saving DF information to sql.
+    """
+    started_process_id = start_process(command, job_name, start, time_unit, time_unit_quantity,
+                                       weekdays, execution_frequency, execution_type)
+    process_df = create_process_info_dataframe(command, job_name, started_process_id, task_id)
+    save_df_to_sql(process_df, sql_engine)
 
 
 def read_log(filename: str) -> List[str]:

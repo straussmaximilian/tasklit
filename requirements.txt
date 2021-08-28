@@ -68,7 +68,7 @@ Send2Trash==1.8.0
 six==1.16.0
 smmap==4.0.0
 SQLAlchemy==1.4.22
-streamlit==0.86.0
+streamlit==0.87.0
 terminado==0.11.0
 testpath==0.5.0
 toml==0.10.2

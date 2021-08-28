@@ -1,6 +1,9 @@
 from datetime import timedelta
 
 
+# DB Path
+APP_ENGINE_PATH = "sqlite:///app/data.db"
+
 # Formats
 FORMAT = {
     "task_id": [],

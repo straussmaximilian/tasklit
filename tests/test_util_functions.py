@@ -200,7 +200,7 @@ class UtilFunctionsTestCase(unittest.TestCase):
             with self.assertRaises(psutil.NoSuchProcess):
                 terminate_process(self.test_process_id)
 
-    def test_function_should_execute(self):
+    def test_match_weekday(self):
         """
         GIVEN a datetime object representing today's date
         WHEN it is passed to the 'function_should_execute' function
@@ -211,7 +211,7 @@ class UtilFunctionsTestCase(unittest.TestCase):
                 mock_datetime.now.weekday.return_value = day_number
                 # Case 1: Check that the function returns 'True' if today is
                 # in the list of provided days of the week.
-                self.assertEqual(function_should_execute(
+                self.assertEqual(match_weekday(
                     mock_datetime.now,
                     list(WEEK_DAYS.values())
                 ), True)
@@ -219,7 +219,7 @@ class UtilFunctionsTestCase(unittest.TestCase):
                 # Case 2: Check that the function returns 'True' if a list of days
                 # of the week has not been provided at all.
                 self.assertEqual(
-                    function_should_execute(
+                    match_weekday(
                         mock_datetime.now,
                         []
                     ), True)
@@ -227,7 +227,7 @@ class UtilFunctionsTestCase(unittest.TestCase):
                 # Case 3: Check that the function returns 'False' if today is not
                 # in the list of provided days of the week.
                 self.assertEqual(
-                    function_should_execute(
+                    match_weekday(
                         mock_datetime.now,
                         ["Uknown Day"]
                     ), False)
@@ -237,7 +237,7 @@ class UtilFunctionsTestCase(unittest.TestCase):
                 with patch('app.settings.consts.WEEK_DAYS') as mocked_weekdays:
                     mocked_weekdays.__getitem__.side_effect = KeyError("Failed to map the day.")
                     with self.assertRaises(KeyError):
-                        function_should_execute(
+                        match_weekday(
                             mock_datetime.now,
                             list(WEEK_DAYS.values())
                         )
