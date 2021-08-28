@@ -17,8 +17,10 @@ from src.utils.job_names import get_job_name
 
 
 @helper_functions.app_exception_handler
-def homepage():
-    # Main interface
+def homepage() -> None:
+    """
+    Assemble necessary UI elements and helper methods to display application homepage.
+    """
     engine = create_engine(settings.APP_ENGINE_PATH, echo=False)
 
     st.write("# 🕙 Tasklit")

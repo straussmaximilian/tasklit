@@ -7,9 +7,9 @@ from multiprocessing import Process
 from pathlib import Path
 from subprocess import Popen
 from typing import (
+    Callable,
     List,
     Optional,
-    Union,
     Tuple
 )
 
@@ -26,7 +26,20 @@ sys.path.append(os.path.dirname((os.path.dirname(os.path.dirname(os.path.dirname
 import app.settings.consts as settings
 
 
-def app_exception_handler(func):
+def app_exception_handler(func: Callable) -> Callable:
+    """
+    Decorator function to streamline error handling within the app.
+    The idea is to have a wrapper around the app that is responsible for displaying
+    error messages. Individual helper methods only raise errors that 'bubble' up to this layer
+    and get processed.
+
+    Args:
+        func: function that returns an application view, e.g. app homepage.
+
+    Returns:
+        resolves the inner function.
+    """
+
     def inner(*args, **kwargs):
         try:
             func(*args, **kwargs)
@@ -111,6 +124,9 @@ def test_command_run(command: str) -> None:
     Utility function to test command execution. Open a subprocess with
     the given command and log output to the default log file.
     The log file will be read and displayed via Streamlit.
+
+    Args:
+        command: command to be executed by the process.
     """
     create_folder_if_not_exists(settings.BASE_LOG_DIR)
 
@@ -130,7 +146,7 @@ def test_command_run(command: str) -> None:
 
 
 def get_time_interval_info(unit_col: DeltaGenerator,
-                           slider_col: DeltaGenerator) -> Tuple[str, int]:
+                           slider_col: DeltaGenerator) -> Tuple[Optional[str], Optional[int]]:
     """
     Get execution frequency information from UI inputs.
 
@@ -151,7 +167,7 @@ def get_time_interval_info(unit_col: DeltaGenerator,
     return time_unit, time_unit_quantity
 
 
-def select_weekdays(unit_col: DeltaGenerator) -> List[str]:
+def select_weekdays(unit_col: DeltaGenerator) -> Optional[List[str]]:
     """
     Select weekdays on which the process must be executed.
 
@@ -229,7 +245,7 @@ def calculate_execution_start(date_input_col: DeltaGenerator,
 def get_command_execution_start(
         execution_type: str,
         execution_frequency: str,
-        weekdays: Union[List[str], None],
+        weekdays: Optional[List[str]],
         date_col: DeltaGenerator,
         slider_col: DeltaGenerator
 ) -> datetime:
@@ -239,7 +255,7 @@ def get_command_execution_start(
     Args:
         execution_type: type of execution schedule: is execution "Scheduled" or not.
         execution_frequency: frequency of execution: "Interval" / "Daily"
-        weekdays: optional list with selected weekdays.
+        weekdays: (optional) list with selected weekdays.
         date_col: Streamlit column with UI element to select execution date.
         slider_col: Streamlit column with UI (slider) element to select hr:min of execution.
 
@@ -282,17 +298,17 @@ def refresh_app(to_wait: int = 0) -> None:
 
 
 def match_weekday(now: datetime,
-                  weekdays: Union[List[str], None]) -> bool:
+                  weekdays: Optional[List[str]]) -> bool:
     """
     Determine if 'today' is the day when a function must be executed.
 
     Args:
         now: datetime object representing current timestamp.
-        weekdays: list of ints from 0 to 6 corresponding to different days of the week,
+        weekdays: optional list of ints from 0 to 6 corresponding to different days of the week,
             e.g. 0 for Monday, etc.
 
     Returns:
-        True/False depending on the check..
+        True/False based on the result of the check.
     """
     today = now.weekday()
 
@@ -313,20 +329,33 @@ def match_duration(now: datetime, start: datetime, duration: timedelta) -> bool:
     Args:
         now: datetime.now() object.
         start: datetime object with process start date.
-        duration: frequency timedelta to be
+        duration: interval timedelta to check whether schedule has been met.
 
     Returns:
-        True or False based on the result of the check.
+        True/False based on the result of the check.
     """
     return now > (start + duration)
 
 
-def function_should_execute(now: datetime,
-                            start: datetime,
-                            duration: timedelta,
-                            weekdays: Union[List[str], None]) -> bool:
-    return match_weekday(now, weekdays) and \
-           match_duration(now, start, duration)
+def process_should_execute(now: datetime,
+                           start: datetime,
+                           duration: timedelta,
+                           weekdays: Optional[List[str]]) -> bool:
+    """
+    Determine whether the process should execute or not:
+        -> is it the correct day of the week?
+        -> is it the correct scheduled interval?
+
+    Args:
+        now: datetime.now()
+        start: datetime object with process start date.
+        duration: interval timedelta to check whether schedule has been met.
+        weekdays: optional list with selected weekdays.
+
+    Returns:
+        True/False based on the result of the check.
+    """
+    return match_weekday(now, weekdays) and match_duration(now, start, duration)
 
 
 def write_job_execution_log(job_name: str, command: str, now: datetime, msg: str) -> None:
@@ -358,9 +387,9 @@ def scheduler_process(
         command: str,
         job_name: str,
         start: datetime,
-        time_unit: str,
-        time_unit_quantity: int,
-        weekdays: Union[List[str], None],
+        time_unit: Optional[str],
+        time_unit_quantity: Optional[int],
+        weekdays: Optional[List[str]],
         execution_frequency: str,
         execution_type: str,
 ) -> None:
@@ -371,9 +400,9 @@ def scheduler_process(
         command: command to be executed.
         job_name: name allocated for the process job.
         start: execution datetime.
-        time_unit: unit of execution time interval, e.g. 'hours', 'days', etc.
-        time_unit_quantity: amount of time interval units.
-        weekdays: optional list with selected weekdays.
+        time_unit: (optional) unit of execution time interval, e.g. 'hours', 'days', etc.
+        time_unit_quantity: (optional) amount of time interval units.
+        weekdays: (optional) list with selected weekdays.
         execution_frequency: frequency of execution: "Interval" / "Daily"
         execution_type: type of execution schedule: is execution "Scheduled" or not.
     """
@@ -387,13 +416,13 @@ def scheduler_process(
     interval_duration = timedelta(days=1) if weekdays else settings.DATE_TRANSLATION[time_unit] * time_unit_quantity
 
     # If process must be executed now, decrease start date by interval timedelta:
-    # this way 'match_duration' will return True in the function_should_execute check.
+    # this way 'match_duration' will return True in the process_should_execute check.
     if execution_type == "Now":
         start -= interval_duration
 
     while True:
         now = datetime.now()
-        if function_should_execute(now, start, interval_duration, weekdays):
+        if process_should_execute(now, start, interval_duration, weekdays):
             write_job_execution_log(job_name, command, now, "Executed")
             launched_process = launch_command_process(command, filename)
             launched_process.wait()
@@ -461,7 +490,7 @@ def save_df_to_sql(df: pd.DataFrame, sql_engine: engine) -> None:
 
 
 def start_process(command: str, job_name: str, start: datetime,
-                  time_unit: str, time_unit_quantity: int, weekdays: Union[List[str], None],
+                  time_unit: Optional[str], time_unit_quantity: Optional[int], weekdays: Optional[List[str]],
                   execution_frequency: str, execution_type: str) -> int:
     """
     Run a process with the selected parameters.
@@ -470,9 +499,9 @@ def start_process(command: str, job_name: str, start: datetime,
         command: command to be executed.
         job_name: name allocated for the process job.
         start: execution datetime.
-        time_unit: unit of execution time interval, e.g. 'hours', 'days', etc.
-        time_unit_quantity: amount of time interval units.
-        weekdays: optional list with selected weekdays.
+        time_unit: (optional) unit of execution time interval, e.g. 'hours', 'days', etc.
+        time_unit_quantity: (optional) amount of time interval units.
+        weekdays: (optional) list with selected weekdays.
         execution_frequency: frequency of execution: "Interval" / "Daily"
         execution_type: type of execution schedule: is execution "Scheduled" or not.
 
@@ -499,7 +528,7 @@ def start_process(command: str, job_name: str, start: datetime,
 
 
 def submit_job(command: str, job_name: str, start: datetime,
-               time_unit: str, time_unit_quantity: int, weekdays: Union[List[str], None],
+               time_unit: Optional[str], time_unit_quantity: Optional[int], weekdays: Optional[List[str]],
                execution_frequency: str, execution_type: str, task_id: int,
                sql_engine: engine) -> None:
     """
@@ -509,9 +538,9 @@ def submit_job(command: str, job_name: str, start: datetime,
         command: command executed by the process.
         job_name: job name allocated for the process.
         start: start date of the job.
-        time_unit: unit of execution time interval, e.g. 'hours', 'days', etc.
-        time_unit_quantity: amount of time interval units.
-        weekdays: optional list with selected weekdays.
+        time_unit: (optional) unit of execution time interval, e.g. 'hours', 'days', etc.
+        time_unit_quantity: (optional) amount of time interval units.
+        weekdays: (optional) list with selected weekdays.
         execution_frequency: frequency of execution: "Interval" / "Daily"
         execution_type: type of execution schedule: is execution "Scheduled" or not.
         task_id: task ID.
