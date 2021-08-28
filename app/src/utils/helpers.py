@@ -608,3 +608,37 @@ def check_last_process_info_update(job_name: str) -> Optional[datetime]:
         return datetime.fromtimestamp(os.path.getmtime(filename))
     except OSError:
         return None
+
+
+def get_process_df(sql_engine) -> pd.DataFrame:
+    """
+    Check for and initialize process info dataframe has already been created.
+    If process dataframe already exists, filter out dead and 'zombie' processes to only
+    show accurate process information.
+
+    Returns:
+        either an existing process dataframe or an empty one,
+            following the settings format.
+    """
+    try:
+        df = pd.read_sql_table("processes", con=sql_engine)
+        df["running"] = df["process id"].apply(
+            lambda x: psutil.pid_exists(x) and psutil.Process(x).status() != 'zombie')
+    except ValueError:
+        df = pd.DataFrame(settings.FORMAT)
+    except OperationalError:
+        raise
+    return df
+
+
+def update_df_process_last_update_info(df: pd.DataFrame) -> None:
+    """
+    Iterate over processes in process df and update respective process 'last update' values.
+
+    Args:
+        df: df with process information.
+    """
+    try:
+        df["last update"] = df["job name"].apply(lambda x: check_last_process_info_update(x))
+    except ValueError:
+        pass
