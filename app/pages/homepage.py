@@ -55,19 +55,25 @@ def homepage():
             refresh_app()
 
     with st.expander("New task"):
-        job_name = st.text_input("Job name", get_job_name())
+        # Calculate 'job_name' once per session, instead of on each re-render
+        # (otherwise it looks weird if job_names are changing on every dropdown selection).
+        if 'job_name' not in st.session_state:
+            st.session_state.job_name = get_job_name()
+
+        job_name = st.text_input("Job name", st.session_state.job_name)
+
         command = st.text_input("Enter command", "ping 8.8.8.8 -c 5")
 
-        if (command != "") and st.button("Test command"):
+        if command and st.button("Test command"):
             st.info(f"Running '{command}'")
 
             test_command_run(command)
 
-        if st.button(f"Submit"):
-            # Moved date selection and task ID generation here ->
-            # otherwise this is calculated on each re-render, even if we don't launch a new task.
-            start, unit, quantity, weekdays, frequency, execution = select_date()
+        start, unit, quantity, weekdays, frequency, execution = select_date()
 
+        if st.button(f"Submit"):
+            # Moved task ID generation here ->
+            # otherwise task IDs are calculated on each re-render.
             new_task_id = get_task_id(df)
 
             submit_job(
@@ -95,17 +101,17 @@ def homepage():
         if explore_task_id:
 
             row = df[df["task_id"] == explore_task_id].iloc[0]
-            job_name = row["job name"]
+            current_job_name = row["job name"]
             p_id = row["process id"]
 
             st.write("## Task execution")
 
-            log_file = f"{settings.BASE_LOG_DIR}/{job_name}.txt"
+            log_file = f"{settings.BASE_LOG_DIR}/{current_job_name}.txt"
             if os.path.isfile(log_file):
                 st.code("".join(read_log(log_file)))
 
             st.write("## Stdout")
-            log_file = f"{settings.BASE_LOG_DIR}/{job_name}_stdout.txt"
+            log_file = f"{settings.BASE_LOG_DIR}/{current_job_name}_stdout.txt"
             if os.path.isfile(log_file):
                 st.code("".join(read_log(log_file)))
 
@@ -114,7 +120,7 @@ def homepage():
                     terminate_process(p_id)
 
                     st.success(
-                        f"Terminated task {job_name} with task_id {row['task_id']} and process id {p_id}."
+                        f"Terminated task {current_job_name} with task_id {row['task_id']} and process id {p_id}."
                     )
 
                     refresh_app(4)

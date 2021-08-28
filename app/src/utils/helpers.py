@@ -7,9 +7,11 @@ from multiprocessing import Process
 from pathlib import Path
 from subprocess import Popen
 from typing import (
+    Any,
     List,
+    Optional,
     Union,
-    Optional
+    Tuple
 )
 
 import pandas as pd
@@ -30,6 +32,7 @@ def app_exception_handler(func):
         except Exception as exc:
             st.error(f"An error was caught: {exc}")
             refresh_app(5)
+
     return inner
 
 
@@ -117,14 +120,87 @@ def test_command_run(command: str) -> None:
 
     while True:
         poll = test_command_process.poll()
+
         stdout.code("".join(read_log(settings.DEFAULT_LOG_DIR_OUT)))
 
+        # TODO: refactor this part. Why do we exit if process if process.poll()
+        #   is not none (meaning that the process is still running)?
         if stop or poll is not None:
             terminate_process(test_command_process.pid)
             break
 
 
-def select_date() :
+def get_execution_schedule():
+    pass
+
+
+def get_interval_frequency(unit_column, slider_column):
+    unit = unit_column.selectbox("Select Unit", ("Minutes", "Hours", "Days", "Weeks"))
+    quantity = slider_column.slider(
+        f"Every x {unit}", min_value=1, max_value=settings.TIME_VALUES[unit]
+    )
+
+    return unit, quantity
+
+
+def get_daily_frequency(unit_select_column):
+    return unit_select_column.multiselect(
+        "Select weekdays:",
+        options=list(settings.WEEK_DAYS.values()),
+        default=list(settings.WEEK_DAYS.values()),
+    )
+
+
+def get_command_execution_schedule():
+    unit = quantity = weekdays = None
+
+    # Get execution frequency settings
+    frequency_select_col, unit_select_col, slider_select_col = st.columns(3)
+
+    frequency = frequency_select_col.selectbox(
+        "Select Frequency", (
+            settings.IMMEDIATE_FREQUENCY,
+            settings.INTERVAL_FREQUENCY,
+            settings.DAILY_FREQUENCY
+        )
+    )
+
+    if frequency == "Interval":
+        unit, quantity = get_interval_frequency(unit_select_col, slider_select_col)
+
+    if frequency == "Daily":
+        weekdays = get_daily_frequency(unit_select_col)
+
+    # Get execution schedule settings
+    execution_schedule_col, date_input_col, time_slider_col = st.columns(3)
+
+    execution = execution_schedule_col.selectbox("Execution", ("Now", "Scheduled"))
+
+    start = datetime.now()
+
+    if execution == "Scheduled":
+        input_date = date_input_col.date_input("Starting date", datetime.now())
+        time = time_slider_col.slider(
+            "Timepoint",
+            min_value=datetime(2020, 1, 1, 00, 00),
+            max_value=datetime(2020, 1, 1, 23, 59),
+            value=datetime(2020, 1, 1, 12, 00),
+            format="HH:mm",
+        )
+        execution_date = datetime(input_date.year, input_date.month, input_date.day)
+        time_difference = time - datetime(2020, 1, 1, 00, 00, 00)
+        start = execution_date + time_difference
+
+        if frequency == "Daily":
+            while settings.WEEK_DAYS[start.weekday()] not in weekdays:
+                start += timedelta(days=1)
+
+    st.text(f"First execution on {start.strftime(settings.DATE_FORMAT)}.")
+
+    return start, unit, quantity, weekdays, frequency, execution
+
+
+def select_date() -> Tuple[Union[datetime, Any], Optional[Any], Optional[Any], Optional[Any], Any, Any]:
     """
     Get process scheduling information from UI inputs.
     """

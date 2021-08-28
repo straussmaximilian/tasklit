@@ -1,6 +1,7 @@
 from datetime import timedelta
 
 
+# Formats
 FORMAT = {
     "task_id": [],
     "created": [],
@@ -10,12 +11,17 @@ FORMAT = {
     "last update": [],
     "running": [],
 }
+DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
 
+# Execution frequencies
+IMMEDIATE_FREQUENCY = "Once"
+INTERVAL_FREQUENCY = "Interval"
+DAILY_FREQUENCY = "Daily"
+
+# Datetime values and translation settings
 TIME_VALUES = {"Minutes": 59, "Hours": 59, "Days": 364, "Weeks": 51}
-
 DATE_TRANSLATION = {"Days": timedelta(days=1), "Hours": timedelta(hours=1), "Minutes": timedelta(minutes=1),
                     "Weeks": timedelta(weeks=1)}
-
 WEEK_DAYS = {
     0: "Mon",
     1: "Tue",
@@ -26,8 +32,6 @@ WEEK_DAYS = {
     6: "Sun"
 }
 
-DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
-
+# Log directories
 BASE_LOG_DIR = "./app/logs"
-
 DEFAULT_LOG_DIR_OUT = f"{BASE_LOG_DIR}/stdout.txt"
