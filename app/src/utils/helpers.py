@@ -642,3 +642,14 @@ def update_df_process_last_update_info(df: pd.DataFrame) -> None:
         df["last update"] = df["job name"].apply(lambda x: check_last_process_info_update(x))
     except ValueError:
         pass
+
+
+def display_process_log_file(log_filename) -> None:
+    """
+    Display process log file in as streamlit code output.
+
+    Args:
+        log_filename: string with log filename.
+    """
+    if os.path.isfile(log_filename):
+        st.code("".join(read_log(log_filename)))

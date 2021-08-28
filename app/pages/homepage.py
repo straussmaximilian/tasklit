@@ -44,7 +44,9 @@ def homepage() -> None:
     # Render and handle UI elements for defining new tasks
     layout_homepage_define_new_task(process_df, engine)
 
+    # Render and handle UI elements for exploring existing tasks
     layout_homepage_explore_task(process_df)
 
+    # Handle user triggered app refresh
     if st.button("Refresh"):
         helper_functions.refresh_app()
