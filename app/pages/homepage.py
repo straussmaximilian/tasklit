@@ -2,6 +2,7 @@ import os
 import sys
 import socket
 
+import psutil
 import streamlit as st
 
 from sqlalchemy import create_engine
@@ -29,6 +30,7 @@ def homepage() -> None:
 
     # Prepare and display process dataframe
     process_df = helper_functions.get_process_df(engine)
+    helper_functions.update_process_status_info(process_df)
     helper_functions.update_df_process_last_update_info(process_df)
     st.table(process_df)
 

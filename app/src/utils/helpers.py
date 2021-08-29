@@ -409,7 +409,8 @@ def scheduler_process(
     filename = f"{settings.BASE_LOG_DIR}/{job_name}_stdout.txt"
 
     if execution_frequency == "Once":
-        launch_command_process(command, filename)
+        launched_process = launch_command_process(command, filename)
+        launched_process.wait()  # without explicit 'wait' here parent exits and child is assigned to the init proc.
         write_job_execution_log(job_name, command, datetime.now(), "Executed")
         return
 
@@ -524,6 +525,20 @@ def start_process(command: str, job_name: str, start: datetime,
 
     process.start()
 
+    current_process = psutil.Process()
+
+    proc = current_process.children(recursive=True)
+
+    for child_process in proc:
+        print(child_process)
+        print(child_process.pid)
+
+    proc_iter = psutil.process_iter(attrs=["pid", "name", "cmdline"])
+    # other_script_running = any("command" in p.info["cmdline"] for p in proc_iter)
+    # print(other_script_running)
+    for i in proc_iter:
+        print(i.info["pid"])
+        print(i.info["cmdline"])
     return process.pid
 
 
@@ -610,7 +625,19 @@ def check_last_process_info_update(job_name: str) -> Optional[datetime]:
         return None
 
 
-def get_process_df(sql_engine) -> pd.DataFrame:
+def update_process_status_info(df: pd.DataFrame) -> None:
+    """
+    If process dataframe already exists, filter out dead and 'zombie' processes to only
+    show accurate process information.
+
+    Args:
+        df: df with process information.
+    """
+    df["running"] = df["process id"].apply(
+        lambda x: psutil.pid_exists(x) and psutil.Process(x).status() == "running")
+
+
+def get_process_df(sql_engine: engine) -> pd.DataFrame:
     """
     Check for and initialize process info dataframe has already been created.
     If process dataframe already exists, filter out dead and 'zombie' processes to only
@@ -622,12 +649,11 @@ def get_process_df(sql_engine) -> pd.DataFrame:
     """
     try:
         df = pd.read_sql_table("processes", con=sql_engine)
-        df["running"] = df["process id"].apply(
-            lambda x: psutil.pid_exists(x) and psutil.Process(x).status() != 'zombie')
     except ValueError:
         df = pd.DataFrame(settings.FORMAT)
     except OperationalError:
         raise
+
     return df
 
 
@@ -646,7 +672,7 @@ def update_df_process_last_update_info(df: pd.DataFrame) -> None:
 
 def display_process_log_file(log_filename) -> None:
     """
-    Display process log file in as streamlit code output.
+    Display process log file in as Streamlit code output.
 
     Args:
         log_filename: string with log filename.

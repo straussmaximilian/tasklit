@@ -24,11 +24,11 @@ def layout_homepage_explore_task(process_df) -> None:
             current_task_pid = current_task_row["process id"]
 
             # Display task execution log
-            st.write("## Task execution")
+            st.write("## Task Execution Log")
             helper_functions.display_process_log_file(f"{settings.BASE_LOG_DIR}/{current_job_name}.txt")
 
             # Display task STDOUT log
-            st.write("## Stdout")
+            st.write("## Task Stdout Log")
             helper_functions.display_process_log_file(f"{settings.BASE_LOG_DIR}/{current_job_name}_stdout.txt")
 
             if st.checkbox("Kill task"):
