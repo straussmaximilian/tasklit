@@ -32,7 +32,11 @@ class HomepageTestCase(unittest.TestCase):
                                               mock_explore_task: MagicMock):
         pass
 
-    def test_refresh_called_on_button_click(self):
+    @patch('app.src.utils.helpers.refresh_app')
+    @patch('app.pages.homepage.st.button')
+    def test_refresh_called_on_button_click(self,
+                                            mock_st_button: MagicMock,
+                                            mock_refresh: MagicMock):
         pass
 
     def test_button_remove_inactive_procs_present(self):

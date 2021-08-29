@@ -8,10 +8,21 @@ from unittest.mock import (
 )
 
 import pandas as pd
+import psutil
 
 from streamlit.script_runner import RerunException
 
-from app.src.utils.helpers import *
+from app.src.utils.helpers import (
+    get_task_id,
+    check_last_process_info_update,
+    read_log,
+    terminate_child_processes,
+    terminate_process,
+    match_weekday,
+    refresh_app,
+    launch_command_process,
+    display_process_log_file
+)
 from app.settings.consts import WEEK_DAYS
 
 
@@ -297,5 +308,47 @@ class UtilFunctionsTestCase(unittest.TestCase):
             with self.assertRaises(OSError):
                 launch_command_process(self.test_command, self.test_log_filename)
 
-    def test_write_job_execution_log(self):
-        pass
+    @patch('app.src.utils.helpers.st.write')
+    @patch('app.src.utils.helpers.st.code')
+    @patch('app.src.utils.helpers.read_log')
+    def test_display_process_log_file_exists(self,
+                                             mock_read_log: MagicMock,
+                                             mock_st_code: MagicMock,
+                                             mock_st_write: MagicMock):
+        """
+        GIVEN a name of an existing log file
+        WHEN passed to the 'display_process_log_file' function
+        THEN check that the file is read and file contents are displayed.
+        """
+        mock_st_code.return_value = True
+        mock_st_write.return_value = True
+        mock_read_log.return_value = self.log_readlines_output
+
+        display_process_log_file(self.test_log_filename)
+
+        mock_read_log.assert_called()
+        mock_st_code.assert_called_with("Line of text")
+        mock_st_write.assert_not_called()
+
+    @patch('app.src.utils.helpers.st.write')
+    @patch('app.src.utils.helpers.st.code')
+    @patch('app.src.utils.helpers.read_log')
+    def test_display_process_log_file_missing(self,
+                                              mock_read_log: MagicMock,
+                                              mock_st_code: MagicMock,
+                                              mock_st_write: MagicMock):
+        """
+        GIVEN a name of a log file that doesn't exist
+        WHEN passed to the 'display_process_log_file' function
+        THEN check that FileNotFoundError is triggered and an error message is logged.
+        """
+        mock_st_code.return_value = True
+        mock_st_write.return_value = True
+        mock_read_log.side_effect = FileNotFoundError("Log file is missing.")
+
+        display_process_log_file(self.test_log_filename)
+
+        mock_read_log.assert_called()
+        mock_st_code.assert_not_called()
+        mock_st_write.assert_called_with("sample_logfile.txt does not exist.")
+

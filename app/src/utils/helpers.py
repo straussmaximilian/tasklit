@@ -663,5 +663,7 @@ def display_process_log_file(log_filename) -> None:
     Args:
         log_filename: string with log filename.
     """
-    if os.path.isfile(log_filename):
+    try:
         st.code("".join(read_log(log_filename)))
+    except FileNotFoundError:
+        st.write(f"{log_filename} does not exist.")
