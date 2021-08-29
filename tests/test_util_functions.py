@@ -25,7 +25,8 @@ from app.src.utils.helpers import (
     launch_command_process,
     display_process_log_file,
     update_df_process_last_update_info,
-    get_process_df
+    get_process_df,
+    update_process_status_info
 )
 from app.settings.consts import WEEK_DAYS, FORMAT
 
@@ -399,4 +400,32 @@ class UtilFunctionsTestCase(unittest.TestCase):
         mock_pd_read_sql_table.side_effect = OperationalError("Couldn't process DF.", {}, "")
         with self.assertRaises(OperationalError):
             get_process_df("sql_engine")
+
+    @patch.object(psutil.Process, "status")
+    @patch('app.src.utils.helpers.psutil.pid_exists')
+    def test_update_process_status_info(self,
+                                        mock_pid_exists: MagicMock,
+                                        mock_process_status: MagicMock):
+        # Case 1: Process exists and is running
+        mock_pid_exists.return_value = True
+        mock_process_status.return_value = "running"
+
+        update_process_status_info(self.test_df)
+
+        self.assertEqual(self.test_df.at[0, "running"], True)
+
+        # Case 2: Process exists, but is not running
+        mock_pid_exists.return_value = True
+        mock_process_status.return_value = "zombie"
+
+        update_process_status_info(self.test_df)
+
+        self.assertEqual(self.test_df.at[0, "running"], False)
+
+        # Case 3: Process doesn't exist anymore
+        mock_pid_exists.return_value = False
+
+        update_process_status_info(self.test_df)
+
+        self.assertEqual(self.test_df.at[0, "running"], False)
 
