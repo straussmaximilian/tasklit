@@ -525,20 +525,6 @@ def start_process(command: str, job_name: str, start: datetime,
 
     process.start()
 
-    current_process = psutil.Process()
-
-    proc = current_process.children(recursive=True)
-
-    for child_process in proc:
-        print(child_process)
-        print(child_process.pid)
-
-    proc_iter = psutil.process_iter(attrs=["pid", "name", "cmdline"])
-    # other_script_running = any("command" in p.info["cmdline"] for p in proc_iter)
-    # print(other_script_running)
-    for i in proc_iter:
-        print(i.info["pid"])
-        print(i.info["cmdline"])
     return process.pid
 
 
