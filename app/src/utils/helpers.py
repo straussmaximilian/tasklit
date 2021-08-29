@@ -529,9 +529,9 @@ def start_process(command: str, job_name: str, start: datetime,
 
 
 def submit_job(command: str, job_name: str, start: datetime,
-               time_unit: Optional[str], time_unit_quantity: Optional[int], weekdays: Optional[List[str]],
-               execution_frequency: str, execution_type: str, task_id: int,
-               sql_engine: engine) -> None:
+               time_unit: Optional[str], time_unit_quantity: Optional[int],
+               weekdays: Optional[List[str]], execution_frequency: str,
+               execution_type: str, task_id: int, sql_engine: engine) -> None:
     """
     Run a process job and save related process information to an SQL alchemy file.
 

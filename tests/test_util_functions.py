@@ -1,5 +1,6 @@
 import unittest
 
+from datetime import datetime
 from unittest.mock import (
     create_autospec,
     mock_open,
@@ -26,7 +27,8 @@ from app.src.utils.helpers import (
     display_process_log_file,
     update_df_process_last_update_info,
     get_process_df,
-    update_process_status_info
+    update_process_status_info,
+    submit_job
 )
 from app.settings.consts import WEEK_DAYS, FORMAT
 
@@ -406,7 +408,13 @@ class UtilFunctionsTestCase(unittest.TestCase):
     def test_update_process_status_info(self,
                                         mock_pid_exists: MagicMock,
                                         mock_process_status: MagicMock):
-        # Case 1: Process exists and is running
+        """
+        GIVEN a dataframe with process information
+        WHEN passed to the 'update_process_status_info' function
+        THEN check that related process 'running' status is correctly identified.
+        """
+        # Case 1: Process exists and is running ->
+        # df["running"] must be True
         mock_pid_exists.return_value = True
         mock_process_status.return_value = "running"
 
@@ -414,7 +422,8 @@ class UtilFunctionsTestCase(unittest.TestCase):
 
         self.assertEqual(self.test_df.at[0, "running"], True)
 
-        # Case 2: Process exists, but is not running
+        # Case 2: Process exists, but is not running ->
+        # df["running"] must be False
         mock_pid_exists.return_value = True
         mock_process_status.return_value = "zombie"
 
@@ -422,10 +431,62 @@ class UtilFunctionsTestCase(unittest.TestCase):
 
         self.assertEqual(self.test_df.at[0, "running"], False)
 
-        # Case 3: Process doesn't exist anymore
+        # Case 3: Process doesn't exist anymore ->
+        # df["running"] must be False
         mock_pid_exists.return_value = False
 
         update_process_status_info(self.test_df)
 
         self.assertEqual(self.test_df.at[0, "running"], False)
+
+    @patch('app.src.utils.helpers.save_df_to_sql')
+    @patch('app.src.utils.helpers.create_process_info_dataframe')
+    @patch('app.src.utils.helpers.start_process')
+    def test_submit_job(self,
+                        mock_start_process: MagicMock,
+                        mock_create_df: MagicMock,
+                        mock_save_df: MagicMock):
+        """
+        GIVEN job execution parameters
+        WHEN passed to the 'submit_job' function
+        THEN check that job execution functions are called.
+        """
+        mock_start_process.return_value = True
+        mock_create_df.return_value = True
+        mock_save_df.return_value = True
+
+        submit_job(
+            "test",
+            "test",
+            datetime(2020, 1, 1),
+            None,
+            None,
+            None,
+            "test",
+            "test",
+            1,
+            "test"
+        )
+
+        mock_start_process.assert_called_with(
+            'test',
+            'test',
+            datetime(2020, 1, 1, 0, 0),
+            None,
+            None,
+            None,
+            'test',
+            'test'
+        )
+        mock_create_df.assert_called_with(
+            'test',
+            'test',
+            True,
+            1
+        )
+        mock_save_df.assert_called_with(
+            True,
+            'test'
+        )
+
 
