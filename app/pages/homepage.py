@@ -2,7 +2,6 @@ import os
 import sys
 import socket
 
-import psutil
 import streamlit as st
 
 from sqlalchemy import create_engine
