@@ -21,7 +21,8 @@ from app.src.utils.helpers import (
     match_weekday,
     refresh_app,
     launch_command_process,
-    display_process_log_file
+    display_process_log_file,
+    update_df_process_last_update_info
 )
 from app.settings.consts import WEEK_DAYS
 
@@ -351,4 +352,19 @@ class UtilFunctionsTestCase(unittest.TestCase):
         mock_read_log.assert_called()
         mock_st_code.assert_not_called()
         mock_st_write.assert_called_with("sample_logfile.txt does not exist.")
+
+    @patch('app.src.utils.helpers.check_last_process_info_update')
+    def test_update_df_process_last_update_info(self,
+                                                mock_check_update: MagicMock):
+        """
+        GIVEN a pandas dataframe with a 'last update' column
+        WHEN passed to the 'update_df_process_last_update_info' function
+        THEN check that 'last update' column is correctly populated.
+        """
+        last_update_date = "2021-01-01"
+        mock_check_update.return_value = last_update_date
+
+        update_df_process_last_update_info(self.test_df)
+
+        self.assertEqual(self.test_df.at[0, "last update"], last_update_date)
 
