@@ -10,6 +10,8 @@ from unittest.mock import (
 import pandas as pd
 import psutil
 
+from pandas.testing import assert_frame_equal
+from sqlalchemy.exc import OperationalError
 from streamlit.script_runner import RerunException
 
 from app.src.utils.helpers import (
@@ -22,9 +24,10 @@ from app.src.utils.helpers import (
     refresh_app,
     launch_command_process,
     display_process_log_file,
-    update_df_process_last_update_info
+    update_df_process_last_update_info,
+    get_process_df
 )
-from app.settings.consts import WEEK_DAYS
+from app.settings.consts import WEEK_DAYS, FORMAT
 
 
 class UtilFunctionsTestCase(unittest.TestCase):
@@ -367,4 +370,33 @@ class UtilFunctionsTestCase(unittest.TestCase):
         update_df_process_last_update_info(self.test_df)
 
         self.assertEqual(self.test_df.at[0, "last update"], last_update_date)
+
+    @patch('app.src.utils.helpers.pd.read_sql_table')
+    def test_get_process_df_no_error_raised(self,
+                                            mock_pd_read_sql_table: MagicMock):
+        """
+        GIVEN an sql engine for reading an SQL file with a pandas DF
+        WHEN passed to the 'get_process_df' function
+        THEN check that correct version of the dataframe is returned.
+        """
+        # Case 1: SQL file present -> DF is read.
+        mock_pd_read_sql_table.return_value = self.test_df
+
+        assert_frame_equal(get_process_df("sql_engine"), self.test_df)
+
+        # Case 2: SQL file is missing -> empty formatted DF is returned.
+        mock_pd_read_sql_table.side_effect = ValueError("Dataframe file is missing.")
+        assert_frame_equal(get_process_df("sql_engine"), pd.DataFrame(FORMAT))
+
+    @patch('app.src.utils.helpers.pd.read_sql_table')
+    def test_get_process_df_error_is_raised(self,
+                                            mock_pd_read_sql_table: MagicMock):
+        """
+        GIVEN an sql engine for reading an SQL file with a pandas DF
+        WHEN passed to the 'get_process_df' function
+        THEN check that OperationalError is raised if the file is missing.
+        """
+        mock_pd_read_sql_table.side_effect = OperationalError("Couldn't process DF.", {}, "")
+        with self.assertRaises(OperationalError):
+            get_process_df("sql_engine")
 
