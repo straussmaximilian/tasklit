@@ -28,7 +28,9 @@ from app.src.utils.helpers import (
     update_df_process_last_update_info,
     get_process_df,
     update_process_status_info,
-    submit_job
+    submit_job,
+    start_process,
+    save_df_to_sql
 )
 from app.settings.consts import WEEK_DAYS, FORMAT
 
@@ -547,6 +549,26 @@ class UtilFunctionsTestCase(unittest.TestCase):
             'test'
         )
 
-    def test_start_process(self):
-        pass
+    @patch('app.src.utils.helpers.Process')
+    def test_start_process(self,
+                           mock_process: MagicMock):
+        """
+        GIVEN job execution parameters
+        WHEN passed to the 'start_process' function
+        THEN check that a process is started and related process ID is returned.
+        """
+        process_mock = MagicMock()
+        process_mock.start = lambda: True
+        process_mock.pid = 123
+        mock_process.return_value = process_mock
 
+        self.assertEqual(start_process(
+            "test",
+            "test",
+            datetime(2020, 1, 1),
+            None,
+            None,
+            None,
+            "test",
+            "test"
+        ), process_mock.pid)
