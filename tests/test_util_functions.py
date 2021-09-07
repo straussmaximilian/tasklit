@@ -30,7 +30,8 @@ from app.src.utils.helpers import (
     update_process_status_info,
     submit_job,
     start_process,
-    save_df_to_sql
+    save_df_to_sql,
+    create_process_info_dataframe
 )
 from app.settings.consts import WEEK_DAYS, FORMAT
 
@@ -89,7 +90,7 @@ class UtilFunctionsTestCase(unittest.TestCase):
             mock_datetime.fromtimestamp.assert_called()
 
     @patch('os.path.getmtime')
-    def test_check_last_process_info_update(self,
+    def test_check_last_process_info_update_raises_error(self,
                                             mock_getmtime: MagicMock):
         """
         GIVEN a job name that corresponds to a missing job log file
@@ -112,7 +113,7 @@ class UtilFunctionsTestCase(unittest.TestCase):
             self.assertEqual(read_log(self.test_log_filename), self.log_readlines_output)
             mock_file.assert_called_with(self.test_log_filename, 'r', encoding='utf-8')
 
-    def test_read_log_raises(self):
+    def test_read_log_raises_error(self):
         """
         GIVEN a path to a missing lof file
         WHEN passed to the 'read_log' function
@@ -230,7 +231,7 @@ class UtilFunctionsTestCase(unittest.TestCase):
             with self.assertRaises(psutil.NoSuchProcess):
                 terminate_process(self.test_process_id)
 
-    def test_match_weekday(self):
+    def test_match_weekday_day_matched(self):
         """
         GIVEN a number corresponding to a day of the week and a list of select weekdays
         WHEN passed to the 'function_should_execute' function
@@ -244,7 +245,7 @@ class UtilFunctionsTestCase(unittest.TestCase):
                     list(WEEK_DAYS.values())
                 ), True)
 
-    def test_match_weekday(self):
+    def test_match_weekday_no_weekdays_provided(self):
         """
         GIVEN only a number representing today's date
         WHEN passed to the 'function_should_execute' function
@@ -257,7 +258,7 @@ class UtilFunctionsTestCase(unittest.TestCase):
                     []
                 ), True)
 
-    def test_match_weekday(self):
+    def test_match_weekday_no_execution(self):
         """
         GIVEN a number corresponding to a day of the week and a list of select weekdays
         WHEN passed to the 'function_should_execute' function
@@ -272,7 +273,7 @@ class UtilFunctionsTestCase(unittest.TestCase):
                         ["Uknown Day"]
                     ), False)
 
-    def test_match_weekday(self):
+    def test_match_weekday_raises_error(self):
         """
         GIVEN a number corresponding to a day of the week and a list of select weekdays
         WHEN passed to the 'function_should_execute' function
@@ -316,10 +317,10 @@ class UtilFunctionsTestCase(unittest.TestCase):
     @patch('time.sleep')
     @patch('app.src.utils.helpers.st.empty')
     @patch('app.src.utils.helpers.st.script_request_queue.RerunData')
-    def test_refresh_app(self,
-                         mock_rerun_data: MagicMock,
-                         mock_st_empty: MagicMock,
-                         mock_sleep: MagicMock):
+    def test_refresh_app_raises_error(self,
+                                      mock_rerun_data: MagicMock,
+                                      mock_st_empty: MagicMock,
+                                      mock_sleep: MagicMock):
         """
         GIVEN no time to wait in seconds
         WHEN passed to the 'refresh_app' function
@@ -349,8 +350,8 @@ class UtilFunctionsTestCase(unittest.TestCase):
             mock_file.assert_called_with(self.test_log_filename, 'w')
 
     @patch('app.src.utils.helpers.Popen')
-    def test_launch_command_process(self,
-                                    mock_popen: MagicMock):
+    def test_launch_command_process_raises_error(self,
+                                                 mock_popen: MagicMock):
         """
         GIVEN a command to execute and a respective job name
         WHEN passed to the 'run_job' function
@@ -424,21 +425,27 @@ class UtilFunctionsTestCase(unittest.TestCase):
     def test_get_process_df_no_error_raised(self,
                                             mock_pd_read_sql_table: MagicMock):
         """
-        GIVEN an sql engine for reading an SQL file with a pandas DF
+        GIVEN an sql engine for reading an SQL file
         WHEN passed to the 'get_process_df' function
-        THEN check that correct version of the dataframe is returned.
+        THEN check that a pandas dataframe with all the rows is returned.
         """
-        # Case 1: SQL file present -> DF is read.
         mock_pd_read_sql_table.return_value = self.test_df
 
         assert_frame_equal(get_process_df("sql_engine"), self.test_df)
 
-        # Case 2: SQL file is missing -> empty formatted DF is returned.
+    @patch('app.src.utils.helpers.pd.read_sql_table')
+    def test_get_process_df_returns_empty_df(self,
+                                            mock_pd_read_sql_table: MagicMock):
+        """
+        GIVEN an sql engine for reading an SQL file
+        WHEN passed to the 'get_process_df' function
+        THEN check that - if the file is missing - an empty dataframe is returned.
+        """
         mock_pd_read_sql_table.side_effect = ValueError("Dataframe file is missing.")
         assert_frame_equal(get_process_df("sql_engine"), pd.DataFrame(FORMAT))
 
     @patch('app.src.utils.helpers.pd.read_sql_table')
-    def test_get_process_df_error_is_raised(self,
+    def test_get_process_df_raises_error(self,
                                             mock_pd_read_sql_table: MagicMock):
         """
         GIVEN an sql engine for reading an SQL file with a pandas DF
@@ -451,9 +458,9 @@ class UtilFunctionsTestCase(unittest.TestCase):
 
     @patch.object(psutil.Process, "status")
     @patch('app.src.utils.helpers.psutil.pid_exists')
-    def test_update_process_status_info(self,
-                                        mock_pid_exists: MagicMock,
-                                        mock_process_status: MagicMock):
+    def test_update_process_status_info_running_process(self,
+                                                        mock_pid_exists: MagicMock,
+                                                        mock_process_status: MagicMock):
         """
         GIVEN a dataframe with information for an existing running process
         WHEN passed to the 'update_process_status_info' function
@@ -468,9 +475,9 @@ class UtilFunctionsTestCase(unittest.TestCase):
 
     @patch.object(psutil.Process, "status")
     @patch('app.src.utils.helpers.psutil.pid_exists')
-    def test_update_process_status_info(self,
-                                        mock_pid_exists: MagicMock,
-                                        mock_process_status: MagicMock):
+    def test_update_process_status_info_zombie_process(self,
+                                                       mock_pid_exists: MagicMock,
+                                                       mock_process_status: MagicMock):
         """
         GIVEN a dataframe with information for an existing zombie process
         WHEN passed to the 'update_process_status_info' function
@@ -483,11 +490,9 @@ class UtilFunctionsTestCase(unittest.TestCase):
 
         self.assertEqual(self.test_df.at[0, "running"], False)
 
-    @patch.object(psutil.Process, "status")
     @patch('app.src.utils.helpers.psutil.pid_exists')
-    def test_update_process_status_info(self,
-                                        mock_pid_exists: MagicMock,
-                                        mock_process_status: MagicMock):
+    def test_update_process_status_info_missing_process(self,
+                                                        mock_pid_exists: MagicMock):
         """
         GIVEN a dataframe with information for a process that does not exist
         WHEN passed to the 'update_process_status_info' function
@@ -585,8 +590,8 @@ class UtilFunctionsTestCase(unittest.TestCase):
         mock_df.to_sql.assert_called_with('processes', con='engine', if_exists='append', index=False)
 
     @patch('app.src.utils.helpers.pd.DataFrame')
-    def test_save_df_to_sql(self,
-                            mock_df: MagicMock):
+    def test_save_df_to_sql_raises_error(self,
+                                   mock_df: MagicMock):
         """
         GIVEN a mocked pd.Dataframe object
         WHEN passed to the 'save_df_to_sql' function
@@ -595,3 +600,23 @@ class UtilFunctionsTestCase(unittest.TestCase):
         mock_df.to_sql.side_effect = OperationalError("Failed to create the sql file.", {}, "")
         with self.assertRaises(OperationalError):
             save_df_to_sql(mock_df, "engine")
+
+    def test_create_process_info_dataframe(self):
+        """
+        GIVEN parameters related to a specific job (e.g. name, command, etc.)
+        WHEN passed to the 'create_process_info_dataframe' function
+        THEN check that a dataframe with these parameters is returned.
+        """
+        with patch('app.src.utils.helpers.datetime') as mock_datetime:
+            mock_datetime.now.return_value = None
+            test_df_copy = self.test_df.copy()
+            test_df_copy["created"] = mock_datetime.now.return_value
+            assert_frame_equal(
+                create_process_info_dataframe(
+                    None,
+                    self.test_job_name,
+                    None,
+                    self.task_ids[0]
+                ),
+                self.test_df
+            )
