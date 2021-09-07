@@ -62,9 +62,8 @@ class UtilFunctionsTestCase(unittest.TestCase):
     def test_get_task_id(self):
         """
         GIVEN a dataframe with process information and related task IDs
-        WHEN it is passed to the 'get_task_id' function
-        THEN check that the newly returned ID is equal to
-        the largest ID in the list + 1.
+        WHEN passed to the 'get_task_id' function
+        THEN check that returned ID == the largest ID in column + 1.
         """
         self.assertEqual(get_task_id(self.test_df), max(self.task_ids) + 1)
 
@@ -73,10 +72,9 @@ class UtilFunctionsTestCase(unittest.TestCase):
                                             mock_getmtime: MagicMock):
         """
         GIVEN a job name that corresponds to a job log file
-        WHEN it is passed to the 'check_last_process_info_update' function
-        THEN check that for correct outputs are produced.
+        WHEN passed to the 'check_last_process_info_update' function
+        THEN check that correct edit timestamp is identified.
         """
-        # Case 1: file is present and getmtime does not raise OSError
         mock_getmtime.return_value = 1629554559
         with patch('app.src.utils.helpers.datetime') as mock_datetime:
             mock_datetime.fromtimestamp.return_value = "2018-12-25 09:27:53"
@@ -88,24 +86,36 @@ class UtilFunctionsTestCase(unittest.TestCase):
             mock_getmtime.assert_called()
             mock_datetime.fromtimestamp.assert_called()
 
-        # Case 2: file operation fails ->
-        # OSError is raised, function returns None
-        mock_getmtime.side_effect = OSError("Oopsy daisies")
+    @patch('os.path.getmtime')
+    def test_check_last_process_info_update(self,
+                                            mock_getmtime: MagicMock):
+        """
+        GIVEN a job name that corresponds to a missing job log file
+        WHEN passed to the 'check_last_process_info_update' function
+        THEN check that OS Error is raised and the function returns None.
+        """
+        mock_getmtime.side_effect = OSError("An error happened.")
         self.assertEqual(
             check_last_process_info_update(self.test_job_name),
             None
         )
 
-    def test_read_log(self):
+    def test_read_log_file_exists(self):
         """
-        GIVEN a path to a file
-        WHEN it is passed to the 'read_log' function
-        THEN check that the function  returns a list of lines from the file.
+        GIVEN a path to an existing log file
+        WHEN passed to the 'read_log' function
+        THEN check that correct read output is returned.
         """
         with patch('builtins.open', mock_open(read_data="Line of text")) as mock_file:
             self.assertEqual(read_log(self.test_log_filename), self.log_readlines_output)
             mock_file.assert_called_with(self.test_log_filename, 'r', encoding='utf-8')
 
+    def test_read_log_raises(self):
+        """
+        GIVEN a path to a missing lof file
+        WHEN passed to the 'read_log' function
+        THEN check that FileNotFoundError is raised.
+        """
         with patch('builtins.open') as mock_open_raises:
             mock_open_raises.side_effect = FileNotFoundError
             with self.assertRaises(FileNotFoundError):
@@ -115,9 +125,9 @@ class UtilFunctionsTestCase(unittest.TestCase):
     def test_terminate_child_processes_processes_found(self,
                                                        mock_wait_procs: MagicMock):
         """
-        GIVEN an object of a parent process that has spawned child processes
-        WHEN it is passed to the 'terminate_child_processes' function
-        THEN check that the related process termination methods are called.
+        GIVEN a parent process object that has spawned child processes
+        WHEN passed to the 'terminate_child_processes' function
+        THEN check that related process termination methods are called.
         """
         parent_process = MagicMock()
         parent_process.children.return_value = [
@@ -158,9 +168,9 @@ class UtilFunctionsTestCase(unittest.TestCase):
     def test_terminate_child_processes_processes_not_found(self,
                                                            mock_wait_procs: MagicMock):
         """
-        GIVEN an object of a parent process that has NOT spawned child processes
-        WHEN it is passed to the 'terminate_child_processes' function
-        THEN check that the related process termination methods are NOT called.
+        GIVEN a parent process object that has NOT spawned child processes
+        WHEN passed to the 'terminate_child_processes' function
+        THEN check that related process termination methods are NOT called.
         """
         parent_process = MagicMock()
         parent_process.children.return_value = []
@@ -188,9 +198,9 @@ class UtilFunctionsTestCase(unittest.TestCase):
     def test_terminate_process_with_child_processes(self,
                                                     mock_terminate_child_procs: MagicMock):
         """
-        GIVEN an ID of an existing test process
-        WHEN it is passed to the 'terminate_process' function
-        THEN check that the related process termination methods have been called.
+        GIVEN an ID of an existing process
+        WHEN passed to the 'terminate_process' function
+        THEN check that related process termination methods have been called.
         """
         with patch('app.src.utils.helpers.psutil.Process') as mock_psutil_process:
             mock_psutil_process.return_value = MagicMock()
@@ -210,8 +220,8 @@ class UtilFunctionsTestCase(unittest.TestCase):
     def test_terminate_process_raises_error(self):
         """
         GIVEN an ID of a test process that does not exist
-        WHEN it is passed to the 'terminate_process' function
-        THEN check that an error is raised.
+        WHEN passed to the 'terminate_process' function
+        THEN check that psutil.NoSuchProcess error is raised.
         """
         with patch('app.src.utils.helpers.psutil.Process') as mock_psutil_process:
             mock_psutil_process.side_effect = psutil.NoSuchProcess("Cannot find the process.")
@@ -220,40 +230,59 @@ class UtilFunctionsTestCase(unittest.TestCase):
 
     def test_match_weekday(self):
         """
-        GIVEN a datetime object representing today's date
-        WHEN it is passed to the 'function_should_execute' function
-        THEN check that correct decision is made.
+        GIVEN a number corresponding to a day of the week and a list of select weekdays
+        WHEN passed to the 'function_should_execute' function
+        THEN check that correct decision is made to execute a function if the days are mapped.
         """
         with patch('app.src.utils.helpers.datetime') as mock_datetime:
             for day_number, day in WEEK_DAYS.items():
                 mock_datetime.now.weekday.return_value = day_number
-                # Case 1: Check that the function returns 'True' if today is
-                # in the list of provided days of the week.
                 self.assertEqual(match_weekday(
                     mock_datetime.now,
                     list(WEEK_DAYS.values())
                 ), True)
 
-                # Case 2: Check that the function returns 'True' if a list of days
-                # of the week has not been provided at all.
-                self.assertEqual(
-                    match_weekday(
-                        mock_datetime.now,
-                        []
-                    ), True)
+    def test_match_weekday(self):
+        """
+        GIVEN only a number representing today's date
+        WHEN passed to the 'function_should_execute' function
+        THEN check that correct decision is made to execute a function.
+        """
+        with patch('app.src.utils.helpers.datetime') as mock_datetime:
+            self.assertEqual(
+                match_weekday(
+                    mock_datetime.now,
+                    []
+                ), True)
 
-                # Case 3: Check that the function returns 'False' if today is not
-                # in the list of provided days of the week.
+    def test_match_weekday(self):
+        """
+        GIVEN a number corresponding to a day of the week and a list of select weekdays
+        WHEN passed to the 'function_should_execute' function
+        THEN check that correct decision is made to NOT execute a function if the days cannot be mapped.
+        """
+        with patch('app.src.utils.helpers.datetime') as mock_datetime:
+            for day_number, day in WEEK_DAYS.items():
+                mock_datetime.now.weekday.return_value = day_number
                 self.assertEqual(
                     match_weekday(
                         mock_datetime.now,
                         ["Uknown Day"]
                     ), False)
 
-                # Case 4: Check that a KeyError is raised if a day number is missing
-                # in the mapping of day numbers to days.
+    def test_match_weekday(self):
+        """
+        GIVEN a number corresponding to a day of the week and a list of select weekdays
+        WHEN passed to the 'function_should_execute' function
+        THEN check that an error is raised if the number is missing in the app settings day mapping.
+        """
+        with patch('app.src.utils.helpers.datetime') as mock_datetime:
+            for day_number, day in WEEK_DAYS.items():
+                mock_datetime.now.weekday.return_value = day_number
+
                 with patch('app.settings.consts.WEEK_DAYS') as mocked_weekdays:
                     mocked_weekdays.__getitem__.side_effect = KeyError("Failed to map the day.")
+
                     with self.assertRaises(KeyError):
                         match_weekday(
                             mock_datetime.now,
@@ -269,10 +298,9 @@ class UtilFunctionsTestCase(unittest.TestCase):
                          mock_sleep: MagicMock):
         """
         GIVEN an optional amount of time to wait in seconds
-        WHEN it is passed to the 'refresh_app' function
-        THEN check that respective Streamlit methods are called.
+        WHEN passed to the 'refresh_app' function
+        THEN check that Streamlit methods for writing log output and refreshing the app are called.
         """
-        # Case 1: time to wait is provided, all of the methods are called.
         mock_st_empty.write.return_value = True
         mock_rerun_data.return_value = True
 
@@ -283,7 +311,18 @@ class UtilFunctionsTestCase(unittest.TestCase):
             mock_rerun_data.assert_called()
             mock_sleep.assert_called()
 
-        # Case 2: time to wait is NOT provided, only exception is raised.
+    @patch('time.sleep')
+    @patch('app.src.utils.helpers.st.empty')
+    @patch('app.src.utils.helpers.st.script_request_queue.RerunData')
+    def test_refresh_app(self,
+                         mock_rerun_data: MagicMock,
+                         mock_st_empty: MagicMock,
+                         mock_sleep: MagicMock):
+        """
+        GIVEN no time to wait in seconds
+        WHEN passed to the 'refresh_app' function
+        THEN check that only Streamlit methods for refreshing the app are called.
+        """
         with self.assertRaises(RerunException):
             refresh_app()
 
@@ -297,10 +336,8 @@ class UtilFunctionsTestCase(unittest.TestCase):
         """
         GIVEN a command to execute and a respective job name
         WHEN passed to the 'run_job' function
-        THEN check that correct object type is returned
-        or an error is raised in case lof file is inaccessible.
+        THEN check that correct object type is returned.
         """
-        # Case 1: No error is raised, subprocess is returned.
         mock_popen.return_value = MagicMock()
         with patch('builtins.open', mock_open(read_data=self.test_command)) as mock_file:
             self.assertEqual(
@@ -309,7 +346,14 @@ class UtilFunctionsTestCase(unittest.TestCase):
             )
             mock_file.assert_called_with(self.test_log_filename, 'w')
 
-        # Case 2: log file access fails and OSError is raised.
+    @patch('app.src.utils.helpers.Popen')
+    def test_launch_command_process(self,
+                                    mock_popen: MagicMock):
+        """
+        GIVEN a command to execute and a respective job name
+        WHEN passed to the 'run_job' function
+        THEN check that an error is raised if log file creation fails.
+        """
         mock_popen.side_effect = OSError("File creation failed.")
         with patch('builtins.open', mock_open(read_data=self.test_command)):
             with self.assertRaises(OSError):
@@ -409,12 +453,10 @@ class UtilFunctionsTestCase(unittest.TestCase):
                                         mock_pid_exists: MagicMock,
                                         mock_process_status: MagicMock):
         """
-        GIVEN a dataframe with process information
+        GIVEN a dataframe with information for an existing running process
         WHEN passed to the 'update_process_status_info' function
-        THEN check that related process 'running' status is correctly identified.
+        THEN check that process status is correctly identified as 'running'.
         """
-        # Case 1: Process exists and is running ->
-        # df["running"] must be True
         mock_pid_exists.return_value = True
         mock_process_status.return_value = "running"
 
@@ -422,8 +464,16 @@ class UtilFunctionsTestCase(unittest.TestCase):
 
         self.assertEqual(self.test_df.at[0, "running"], True)
 
-        # Case 2: Process exists, but is not running ->
-        # df["running"] must be False
+    @patch.object(psutil.Process, "status")
+    @patch('app.src.utils.helpers.psutil.pid_exists')
+    def test_update_process_status_info(self,
+                                        mock_pid_exists: MagicMock,
+                                        mock_process_status: MagicMock):
+        """
+        GIVEN a dataframe with information for an existing zombie process
+        WHEN passed to the 'update_process_status_info' function
+        THEN check that process status is correctly identified as not 'running'.
+        """
         mock_pid_exists.return_value = True
         mock_process_status.return_value = "zombie"
 
@@ -431,8 +481,16 @@ class UtilFunctionsTestCase(unittest.TestCase):
 
         self.assertEqual(self.test_df.at[0, "running"], False)
 
-        # Case 3: Process doesn't exist anymore ->
-        # df["running"] must be False
+    @patch.object(psutil.Process, "status")
+    @patch('app.src.utils.helpers.psutil.pid_exists')
+    def test_update_process_status_info(self,
+                                        mock_pid_exists: MagicMock,
+                                        mock_process_status: MagicMock):
+        """
+        GIVEN a dataframe with information for a process that does not exist
+        WHEN passed to the 'update_process_status_info' function
+        THEN check that process status is correctly identified as not 'running'.
+        """
         mock_pid_exists.return_value = False
 
         update_process_status_info(self.test_df)
@@ -489,4 +547,6 @@ class UtilFunctionsTestCase(unittest.TestCase):
             'test'
         )
 
+    def test_start_process(self):
+        pass
 
