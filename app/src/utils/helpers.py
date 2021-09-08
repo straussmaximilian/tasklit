@@ -185,11 +185,9 @@ def select_weekdays(unit_col: DeltaGenerator) -> Optional[List[str]]:
     )
 
 
-def get_execution_interval_information(
-        execution_frequency: str,
-        unit_col: DeltaGenerator,
-        slider_col: DeltaGenerator
-) -> Tuple[Optional[str], Optional[int], Optional[List[str]]]:
+def get_execution_interval_information(execution_frequency: str, unit_col: DeltaGenerator,
+                                       slider_col: DeltaGenerator
+                                       ) -> Tuple[Optional[str], Optional[int], Optional[List[str]]]:
     """
     Get command execution interval information, including time interval (e.g. hours, weeks, etc.),
     related quantity and execution weekdays.
@@ -242,13 +240,9 @@ def calculate_execution_start(date_input_col: DeltaGenerator,
     return execution_date + time_difference
 
 
-def get_command_execution_start(
-        execution_type: str,
-        execution_frequency: str,
-        weekdays: Optional[List[str]],
-        date_col: DeltaGenerator,
-        slider_col: DeltaGenerator
-) -> datetime:
+def get_command_execution_start(execution_type: str, execution_frequency: str,
+                                weekdays: Optional[List[str]], date_col: DeltaGenerator,
+                                slider_col: DeltaGenerator) -> datetime:
     """
     Get the start datetime of command execution.
 
@@ -360,7 +354,7 @@ def process_should_execute(now: datetime,
 
 def write_job_execution_log(job_name: str, command: str, now: datetime, msg: str) -> None:
     """
-    Save information on job execution to a log file.
+    Save job execution information to a log file.
 
     Args:
         job_name: name of the job for which to write the log.
@@ -383,16 +377,10 @@ def write_job_execution_log(job_name: str, command: str, now: datetime, msg: str
             raise
 
 
-def scheduler_process(
-        command: str,
-        job_name: str,
-        start: datetime,
-        time_unit: Optional[str],
-        time_unit_quantity: Optional[int],
-        weekdays: Optional[List[str]],
-        execution_frequency: str,
-        execution_type: str,
-) -> None:
+def scheduler_process(command: str, job_name: str, start: datetime,
+                      time_unit: Optional[str], time_unit_quantity: Optional[int],
+                      weekdays: Optional[List[str]], execution_frequency: str,
+                      execution_type: str) -> None:
     """
     Create an event loop that handles process execution.
     Checks for current date. If date criterion is met -> start the process with command execution.
@@ -406,10 +394,10 @@ def scheduler_process(
         execution_frequency: frequency of execution: "Interval" / "Daily"
         execution_type: type of execution schedule: is execution "Scheduled" or not.
     """
-    filename = f"{settings.BASE_LOG_DIR}/{job_name}_stdout.txt"
+    stdout_log_file = f"{settings.BASE_LOG_DIR}/{job_name}_stdout.txt"
 
     if execution_frequency == "Once":
-        launched_process = launch_command_process(command, filename)
+        launched_process = launch_command_process(command, stdout_log_file)
         launched_process.wait()  # without explicit 'wait' here parent exits and child is assigned to the init proc.
         write_job_execution_log(job_name, command, datetime.now(), "Executed")
         return
@@ -417,7 +405,7 @@ def scheduler_process(
     interval_duration = timedelta(days=1) if weekdays else settings.DATE_TRANSLATION[time_unit] * time_unit_quantity
 
     # If process must be executed now, decrease start date by interval timedelta:
-    # this way 'match_duration' will return True in the process_should_execute check.
+    # this way 'match_duration' will return True in the 'process_should_execute' check.
     if execution_type == "Now":
         start -= interval_duration
 
@@ -425,7 +413,7 @@ def scheduler_process(
         now = datetime.now()
         if process_should_execute(now, start, interval_duration, weekdays):
             write_job_execution_log(job_name, command, now, "Executed")
-            launched_process = launch_command_process(command, filename)
+            launched_process = launch_command_process(command, stdout_log_file)
             launched_process.wait()
             start += interval_duration
         else:

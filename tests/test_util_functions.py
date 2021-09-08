@@ -31,7 +31,8 @@ from app.src.utils.helpers import (
     submit_job,
     start_process,
     save_df_to_sql,
-    create_process_info_dataframe
+    create_process_info_dataframe,
+    write_job_execution_log
 )
 from app.settings.consts import WEEK_DAYS, FORMAT
 
@@ -591,7 +592,7 @@ class UtilFunctionsTestCase(unittest.TestCase):
 
     @patch('app.src.utils.helpers.pd.DataFrame')
     def test_save_df_to_sql_raises_error(self,
-                                   mock_df: MagicMock):
+                                         mock_df: MagicMock):
         """
         GIVEN a mocked pd.Dataframe object
         WHEN passed to the 'save_df_to_sql' function
@@ -620,3 +621,8 @@ class UtilFunctionsTestCase(unittest.TestCase):
                 ),
                 self.test_df
             )
+
+    def test_write_job_execution_log(self):
+        """"""
+
+

@@ -1,5 +1,5 @@
 from pages.homepage import homepage
 
 
-# Render Tasklit homepage
+# Render application homepage
 homepage()
