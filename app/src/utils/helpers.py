@@ -321,7 +321,7 @@ def match_duration(now: datetime, start: datetime, duration: timedelta) -> bool:
     than current datetime. If yes -> process must be executed.
 
     Args:
-        now: datetime.now() object.
+        now: datetime.now().
         start: datetime object with process start date.
         duration: interval timedelta to check whether schedule has been met.
 

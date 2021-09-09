@@ -34,7 +34,8 @@ from app.src.utils.helpers import (
     save_df_to_sql,
     create_process_info_dataframe,
     write_job_execution_log,
-    process_should_execute
+    process_should_execute,
+    app_exception_handler
 )
 from app.settings.consts import WEEK_DAYS, FORMAT
 
@@ -64,6 +65,13 @@ class UtilFunctionsTestCase(unittest.TestCase):
             }
         )
         cls.test_command = "ping 8.8.8.8 -c 5"
+
+    @staticmethod
+    @app_exception_handler
+    def decorated_test_func(should_raise=False):
+        if should_raise:
+            raise ValueError("Exception was raised.")
+        return None
 
     def test_get_task_id(self):
         """
@@ -642,7 +650,9 @@ class UtilFunctionsTestCase(unittest.TestCase):
                 )
 
                 mock_file.return_value.write.assert_has_calls([
+                    # 1 call for '*.txt' log write
                     call('2021-01-01 00:00:00 Executed ping 8.8.8.8 -c 5\n'),
+                    # 2 calls for '*_stdout.txt' log write
                     call(f"\n{'=' * 70} \n"),
                     call('2021-01-01 00:00:00 Executed ping 8.8.8.8 -c 5\n')
                 ])
@@ -695,8 +705,8 @@ class UtilFunctionsTestCase(unittest.TestCase):
     @patch('app.src.utils.helpers.match_duration')
     @patch('app.src.utils.helpers.match_weekday')
     def test_process_should_not_execute(self,
-                                    mock_match_weekday: MagicMock,
-                                    mock_match_duration: MagicMock):
+                                        mock_match_weekday: MagicMock,
+                                        mock_match_duration: MagicMock):
         """
         GIVEN current daytime information
         WHEN passed to the 'test_process_should_execute' function
@@ -714,4 +724,45 @@ class UtilFunctionsTestCase(unittest.TestCase):
         ),
             False
         )
+
+    @patch('app.src.utils.helpers.st.error')
+    @patch('app.src.utils.helpers.refresh_app')
+    def test_app_exception_handler_not_raises_error(self,
+                                                    mock_refresh_app: MagicMock,
+                                                    mock_st_error: MagicMock):
+        """
+        GIVEN a function defined with the exception handler decorator
+        WHEN this function is called without triggering an exception
+        THEN check that decorator exception handling methods are not called.
+        """
+        mock_refresh_app.return_value = True
+        mock_st_error.return_value = True
+
+        self.decorated_test_func()
+
+        mock_refresh_app.assert_not_called()
+        mock_st_error.assert_not_called()
+
+    @patch('app.src.utils.helpers.st.error')
+    @patch('app.src.utils.helpers.refresh_app')
+    def test_app_exception_handler_raises_error(self,
+                                                mock_refresh_app: MagicMock,
+                                                mock_st_error: MagicMock):
+        """
+        GIVEN a function defined with the exception handler decorator
+        WHEN this function is called with triggering an exception
+        THEN check that decorator exception handling methods are called.
+        """
+        mock_refresh_app.return_value = True
+        mock_st_error.return_value = True
+
+        self.decorated_test_func(True)
+
+        mock_refresh_app.assert_called_with(5)
+        mock_st_error.assert_called_with('An error was caught: Exception was raised.')
+
+
+
+
+
 
