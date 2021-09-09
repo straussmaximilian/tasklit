@@ -5,7 +5,8 @@ from unittest.mock import (
     create_autospec,
     mock_open,
     patch,
-    MagicMock
+    MagicMock,
+    call
 )
 
 import pandas as pd
@@ -623,6 +624,46 @@ class UtilFunctionsTestCase(unittest.TestCase):
             )
 
     def test_write_job_execution_log(self):
-        """"""
+        """
+        GIVEN job info that should be logged (e.g. job name, command, etc.)
+        WHEN passed to the 'write_job_execution_log' function
+        THEN check that correct log file information is logged.
+        """
+        with patch('app.src.utils.helpers.datetime') as mock_datetime:
+            mock_datetime.now.strftime.return_value = '2021-01-01 00:00:00'
 
+            with patch('builtins.open', mock_open()) as mock_file:
+                write_job_execution_log(
+                    self.test_job_name,
+                    self.test_command,
+                    mock_datetime.now,
+                    "Executed"
+                )
 
+                mock_file.return_value.write.assert_has_calls([
+                    call('2021-01-01 00:00:00 Executed ping 8.8.8.8 -c 5\n'),
+                    call(f"\n{'=' * 70} \n"),
+                    call('2021-01-01 00:00:00 Executed ping 8.8.8.8 -c 5\n')
+                ])
+
+                mock_file.assert_called_with('./app/logs/infallible_strauss_stdout.txt', 'a')
+
+    def test_write_job_execution_log_raises_error(self):
+        """
+        GIVEN job info that should be logged (e.g. job name, command, etc.)
+        WHEN passed to the 'write_job_execution_log' function
+        THEN check that an error is raised if the log file cannot be accessed.
+        """
+        with patch('app.src.utils.helpers.datetime') as mock_datetime:
+            mock_datetime.now.strftime.return_value = '2021-01-01 00:00:00'
+
+            with patch('builtins.open', mock_open()) as mock_file:
+                mock_file.side_effect = OSError
+
+                with self.assertRaises(OSError):
+                    write_job_execution_log(
+                        self.test_job_name,
+                        self.test_command,
+                        mock_datetime.now,
+                        "Executed"
+                    )
