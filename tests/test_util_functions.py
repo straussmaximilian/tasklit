@@ -1,6 +1,6 @@
 import unittest
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from unittest.mock import (
     create_autospec,
     mock_open,
@@ -33,7 +33,8 @@ from app.src.utils.helpers import (
     start_process,
     save_df_to_sql,
     create_process_info_dataframe,
-    write_job_execution_log
+    write_job_execution_log,
+    process_should_execute
 )
 from app.settings.consts import WEEK_DAYS, FORMAT
 
@@ -93,7 +94,7 @@ class UtilFunctionsTestCase(unittest.TestCase):
 
     @patch('os.path.getmtime')
     def test_check_last_process_info_update_raises_error(self,
-                                            mock_getmtime: MagicMock):
+                                                         mock_getmtime: MagicMock):
         """
         GIVEN a job name that corresponds to a missing job log file
         WHEN passed to the 'check_last_process_info_update' function
@@ -437,7 +438,7 @@ class UtilFunctionsTestCase(unittest.TestCase):
 
     @patch('app.src.utils.helpers.pd.read_sql_table')
     def test_get_process_df_returns_empty_df(self,
-                                            mock_pd_read_sql_table: MagicMock):
+                                             mock_pd_read_sql_table: MagicMock):
         """
         GIVEN an sql engine for reading an SQL file
         WHEN passed to the 'get_process_df' function
@@ -448,7 +449,7 @@ class UtilFunctionsTestCase(unittest.TestCase):
 
     @patch('app.src.utils.helpers.pd.read_sql_table')
     def test_get_process_df_raises_error(self,
-                                            mock_pd_read_sql_table: MagicMock):
+                                         mock_pd_read_sql_table: MagicMock):
         """
         GIVEN an sql engine for reading an SQL file with a pandas DF
         WHEN passed to the 'get_process_df' function
@@ -667,3 +668,50 @@ class UtilFunctionsTestCase(unittest.TestCase):
                         mock_datetime.now,
                         "Executed"
                     )
+
+    @patch('app.src.utils.helpers.match_duration')
+    @patch('app.src.utils.helpers.match_weekday')
+    def test_process_should_execute(self,
+                                    mock_match_weekday: MagicMock,
+                                    mock_match_duration: MagicMock):
+        """
+        GIVEN current daytime information
+        WHEN passed to the 'test_process_should_execute' function
+        THEN check that a decision is made to execute the process
+        if both checks pass.
+        """
+        mock_match_weekday.return_value = True
+        mock_match_duration.return_value = True
+
+        self.assertEqual(process_should_execute(
+            datetime.now(),
+            datetime.now(),
+            timedelta(1),
+            []
+        ),
+            True
+        )
+
+    @patch('app.src.utils.helpers.match_duration')
+    @patch('app.src.utils.helpers.match_weekday')
+    def test_process_should_not_execute(self,
+                                    mock_match_weekday: MagicMock,
+                                    mock_match_duration: MagicMock):
+        """
+        GIVEN current daytime information
+        WHEN passed to the 'test_process_should_execute' function
+        THEN check that a decision is made to NOT execute the process if
+        at least one of the checks fails.
+        """
+        mock_match_weekday.return_value = True
+        mock_match_duration.return_value = False
+
+        self.assertEqual(process_should_execute(
+            datetime.now(),
+            datetime.now(),
+            timedelta(1),
+            []
+        ),
+            False
+        )
+
