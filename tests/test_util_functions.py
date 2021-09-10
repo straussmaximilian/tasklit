@@ -43,7 +43,9 @@ from app.src.utils.helpers import (
     get_execution_interval_information,
     calculate_execution_start,
     get_command_execution_start,
-    match_duration
+    match_duration,
+    launch_scheduler_process,
+    execute_job
 )
 from app.settings.consts import WEEK_DAYS, FORMAT, DEFAULT_LOG_DIR_OUT
 
@@ -73,6 +75,8 @@ class UtilFunctionsTestCase(unittest.TestCase):
             }
         )
         cls.test_command = "ping 8.8.8.8 -c 5"
+        cls.stdout_log_filepath = './app/logs/infallible_strauss_stdout.txt'
+        cls.now_datetime = datetime(2021, 1, 1, 00, 00)
 
     @staticmethod
     @app_exception_handler
@@ -665,7 +669,7 @@ class UtilFunctionsTestCase(unittest.TestCase):
                     call('2021-01-01 00:00:00 Executed ping 8.8.8.8 -c 5\n')
                 ])
 
-                mock_file.assert_called_with('./app/logs/infallible_strauss_stdout.txt', 'a')
+                mock_file.assert_called_with(self.stdout_log_filepath, 'a')
 
     def test_write_job_execution_log_raises_error(self):
         """
@@ -973,7 +977,7 @@ class UtilFunctionsTestCase(unittest.TestCase):
         date_col = MagicMock()
         slider_col = MagicMock()
         result = '2020-01-01 23:59:00'
-        mock_calculate_start.return_value = datetime(2021, 1, 1, 00, 00)
+        mock_calculate_start.return_value = self.now_datetime
 
         with patch('app.src.utils.helpers.datetime') as mock_datetime:
             mock_datetime.now.return_value = result
@@ -1008,10 +1012,10 @@ class UtilFunctionsTestCase(unittest.TestCase):
         weekdays = ["Tue"]
         date_col = MagicMock()
         slider_col = MagicMock()
-        mock_calculate_start.return_value = datetime(2021, 1, 1, 00, 00)
+        mock_calculate_start.return_value = self.now_datetime
 
         with patch('app.src.utils.helpers.datetime') as mock_datetime:
-            mock_datetime.now.return_value = datetime(2021, 1, 1, 00, 00)
+            mock_datetime.now.return_value = self.now_datetime
             mock_datetime.strftime.return_value = '2020-01-01 00:00:00'
             mock_datetime.weekday.return_value = 1
 
@@ -1031,7 +1035,7 @@ class UtilFunctionsTestCase(unittest.TestCase):
         WHEN passed to the 'match_duration' function
         THEN check decision is made to not execute the job.
         """
-        now = datetime(2021, 1, 1, 00, 00)
+        now = self.now_datetime
         start = datetime(2021, 1, 2, 00, 00)
         duration = timedelta(1)
 
@@ -1043,23 +1047,78 @@ class UtilFunctionsTestCase(unittest.TestCase):
         WHEN passed to the 'get_command_execution_start' function
         THEN check decision is made to execute the job.
         """
-        now = datetime(2021, 1, 10, 00, 00)
-        start = datetime(2021, 1, 8, 00, 00)
+        now = self.now_datetime
+        start = datetime(2020, 12, 30, 00, 00)
         duration = timedelta(1)
 
         self.assertEqual(match_duration(now, start, duration), True)
 
+    @patch('app.src.utils.helpers.write_job_execution_log')
+    @patch('app.src.utils.helpers.launch_command_process')
+    def test_execute_job(self,
+                         mock_launch_process: MagicMock,
+                         mock_write_log: MagicMock):
+        """
+        GIVEN parameters for executing a job
+        WHEN passed to the 'execute_job' function
+        THEN check that related job execution methods are called.
+        """
+        mock_launch_process.return_value.wait.return_value = True
 
+        execute_job(
+            self.test_command,
+            self.stdout_log_filepath,
+            self.test_job_name,
+            self.now_datetime,
+        )
 
+        mock_launch_process.assert_called_with(
+            self.test_command,
+            self.stdout_log_filepath
+        )
+        mock_launch_process.return_value.wait.assert_called()
+        mock_write_log.assert_called_with(
+            self.test_job_name,
+            self.test_command,
+            self.now_datetime,
+            'Executed'
+        )
 
+    @patch('app.src.utils.helpers.time.sleep')
+    @patch('app.src.utils.helpers.process_should_execute')
+    @patch('app.src.utils.helpers.execute_job')
+    def test_scheduler_process_once(self,
+                                    mock_execute: MagicMock,
+                                    mock_should_execute: MagicMock,
+                                    mock_sleep: MagicMock):
+        """
+        GIVEN parameters for launching a scheduler process
+        WHEN passed to the 'scheduler_process' function
+        THEN check that the function correctly decides on whether
+        to execute the job once or multiple times.
+        """
+        execution_frequency = "Once"
+        execution_type = ""
 
+        with patch('app.src.utils.helpers.datetime') as mock_datetime:
+            mock_datetime.now.return_value = self.now_datetime
 
+            launch_scheduler_process(
+                self.test_command,
+                self.test_job_name,
+                self.now_datetime,
+                None,
+                None,
+                None,
+                execution_frequency,
+                execution_type
+            )
 
-
-
-
-
-
-
-
-
+            mock_execute.assert_called_with(
+                self.test_command,
+                self.stdout_log_filepath,
+                self.test_job_name,
+                self.now_datetime
+            )
+            mock_should_execute.assert_not_called()
+            mock_sleep.assert_not_called()

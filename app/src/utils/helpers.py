@@ -377,16 +377,36 @@ def write_job_execution_log(job_name: str, command: str, now: datetime, msg: str
             raise
 
 
-def scheduler_process(command: str, job_name: str, start: datetime,
-                      time_unit: Optional[str], time_unit_quantity: Optional[int],
-                      weekdays: Optional[List[str]], execution_frequency: str,
-                      execution_type: str) -> None:
+def execute_job(command: str, log_filepath: str,
+                job_name: str, now: datetime) -> None:
     """
-    Create an event loop that handles process execution.
-    Checks for current date. If date criterion is met -> start the process with command execution.
+    Interface for running a job:
+        -> launch a process
+        -> wait for the process to finish
+        -> write job execution log.
+
     Args:
         command: command to be executed.
-        job_name: name allocated for the process job.
+        log_filepath:
+        job_name: name generated for the job.
+        now: datetime.now()
+    """
+    launched_process = launch_command_process(command, log_filepath)
+    launched_process.wait()
+    write_job_execution_log(job_name, command, now, "Executed")
+
+
+def launch_scheduler_process(command: str, job_name: str, start: datetime,
+                             time_unit: Optional[str], time_unit_quantity: Optional[int],
+                             weekdays: Optional[List[str]], execution_frequency: str,
+                             execution_type: str) -> None:
+    """
+    Launch a scheduler process that spawns job execution processes if launch conditions are met.
+    Checks for current date. If date criterion is met -> start the process with command execution.
+
+    Args:
+        command: command to be executed.
+        job_name: name generated for the job.
         start: execution datetime.
         time_unit: (optional) unit of execution time interval, e.g. 'hours', 'days', etc.
         time_unit_quantity: (optional) amount of time interval units.
@@ -397,12 +417,11 @@ def scheduler_process(command: str, job_name: str, start: datetime,
     stdout_log_file = f"{settings.BASE_LOG_DIR}/{job_name}_stdout.txt"
 
     if execution_frequency == "Once":
-        launched_process = launch_command_process(command, stdout_log_file)
-        launched_process.wait()  # without explicit 'wait' here parent exits and child is assigned to the init proc.
-        write_job_execution_log(job_name, command, datetime.now(), "Executed")
+        execute_job(command, stdout_log_file, job_name, datetime.now())
         return
 
-    interval_duration = timedelta(days=1) if weekdays else settings.DATE_TRANSLATION[time_unit] * time_unit_quantity
+    interval_duration = timedelta(days=1) if weekdays else \
+        settings.DATE_TRANSLATION[time_unit] * time_unit_quantity
 
     # If process must be executed now, decrease start date by interval timedelta:
     # this way 'match_duration' will return True in the 'process_should_execute' check.
@@ -412,9 +431,7 @@ def scheduler_process(command: str, job_name: str, start: datetime,
     while True:
         now = datetime.now()
         if process_should_execute(now, start, interval_duration, weekdays):
-            write_job_execution_log(job_name, command, now, "Executed")
-            launched_process = launch_command_process(command, stdout_log_file)
-            launched_process.wait()
+            execute_job(command, stdout_log_file, job_name, now)
             start += interval_duration
         else:
             time.sleep(1)
@@ -498,7 +515,7 @@ def start_process(command: str, job_name: str, start: datetime,
         ID of the started process.
     """
     process = Process(
-        target=scheduler_process,
+        target=launch_scheduler_process,
         args=(
             command,
             job_name,
@@ -638,10 +655,7 @@ def update_df_process_last_update_info(df: pd.DataFrame) -> None:
     Args:
         df: df with process information.
     """
-    try:
-        df["last update"] = df["job name"].apply(lambda x: check_last_process_info_update(x))
-    except ValueError:
-        pass
+    df["last update"] = df["job name"].apply(lambda x: check_last_process_info_update(x) if x else "")
 
 
 def display_process_log_file(log_filename) -> None:
