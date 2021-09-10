@@ -40,7 +40,9 @@ from app.src.utils.helpers import (
     test_command_run,
     get_time_interval_info,
     select_weekdays,
-    get_execution_interval_information
+    get_execution_interval_information,
+    calculate_execution_start,
+    get_command_execution_start
 )
 from app.settings.consts import WEEK_DAYS, FORMAT, DEFAULT_LOG_DIR_OUT
 
@@ -841,15 +843,15 @@ class UtilFunctionsTestCase(unittest.TestCase):
         WHEN passed to the 'get_time_interval_info' function
         THEN check that correct time values are returned.
         """
-        col1 = MagicMock()
-        col2 = MagicMock()
-        col1.selectbox.return_value = "Minutes"
-        col2.slider.return_value = 5
+        unit_col = MagicMock()
+        quantity_col = MagicMock()
+        unit_col.selectbox.return_value = "Minutes"
+        quantity_col.slider.return_value = 5
 
-        selected_time, selected_quantity = get_time_interval_info(col1, col2)
+        selected_time, selected_quantity = get_time_interval_info(unit_col, quantity_col)
 
-        self.assertEqual(selected_time, col1.selectbox.return_value)
-        self.assertEqual(selected_quantity, col2.slider.return_value)
+        self.assertEqual(selected_time, unit_col.selectbox.return_value)
+        self.assertEqual(selected_quantity, quantity_col.slider.return_value)
 
     def test_select_weekdays(self):
         """
@@ -857,10 +859,10 @@ class UtilFunctionsTestCase(unittest.TestCase):
         WHEN passed to the 'select_weekdays' function
         THEN check that correct day of the week selection is returned.
         """
-        col = MagicMock()
-        col.multiselect.return_value = "Tue"
+        unit_col = MagicMock()
+        unit_col.multiselect.return_value = "Tue"
 
-        self.assertEqual(select_weekdays(col), col.multiselect.return_value)
+        self.assertEqual(select_weekdays(unit_col), unit_col.multiselect.return_value)
 
     @patch('app.src.utils.helpers.select_weekdays')
     @patch('app.src.utils.helpers.get_time_interval_info')
@@ -873,17 +875,17 @@ class UtilFunctionsTestCase(unittest.TestCase):
         THEN check that returned time interval information matches expected values.
         """
         frequency = "Interval"
-        col1 = MagicMock()
-        col2 = MagicMock()
+        unit_col = MagicMock()
+        quantity_col = MagicMock()
         mock_time_info.return_value = ("Weekly", 5)
 
         unit, quantity, weekdays = get_execution_interval_information(
             frequency,
-            col1,
-            col2
+            unit_col,
+            quantity_col
         )
 
-        mock_time_info.assert_called_with(col1, col2)
+        mock_time_info.assert_called_with(unit_col, quantity_col)
         mock_select.assert_not_called()
 
         self.assertEqual(
@@ -912,17 +914,17 @@ class UtilFunctionsTestCase(unittest.TestCase):
         THEN check that returned time interval information matches expected values.
         """
         frequency = "Daily"
-        col1 = MagicMock()
-        col2 = MagicMock()
+        unit_col = MagicMock()
+        quantity_col = MagicMock()
         mock_select.return_value = ["Tue"]
 
         unit, quantity, weekdays = get_execution_interval_information(
             frequency,
-            col1,
-            col2
+            unit_col,
+            quantity_col
         )
         mock_time_info.assert_not_called()
-        mock_select.assert_called_with(col1)
+        mock_select.assert_called_with(unit_col)
 
         self.assertEqual(
             unit,
@@ -938,6 +940,91 @@ class UtilFunctionsTestCase(unittest.TestCase):
             weekdays,
             mock_select.return_value
         )
+
+    def test_calculate_execution_start(self):
+        """
+        GIVEN Streamlit widgets for selecting execution date and time
+        WHEN passed to the 'calculate_execution_start' function
+        THEN check that returned execution start datetime matches expected value.
+        """
+        date_col = MagicMock()
+        date_col.date_input.return_value = datetime(2020, 1, 1, 00, 00)
+        time_slider_col = MagicMock()
+        time_slider_col.slider.return_value = datetime(2020, 1, 1, 23, 59)
+
+        self.assertEqual(
+            calculate_execution_start(date_col, time_slider_col),
+            datetime(2020, 1, 1, 23, 59)
+        )
+
+    @patch('app.src.utils.helpers.st.text')
+    @patch('app.src.utils.helpers.calculate_execution_start')
+    def test_get_command_execution_start_scheduled(self,
+                                                   mock_calculate_start: MagicMock,
+                                                   mock_st_text: MagicMock):
+        """
+        GIVEN an execution type with no execution frequency
+        WHEN passed to the 'get_command_execution_start' function
+        THEN check that correct execution start value is returned.
+        """
+        execution_type = "Scheduled"
+        execution_frequency = ""
+        date_col = MagicMock()
+        slider_col = MagicMock()
+        result = '2020-01-01 23:59:00'
+        mock_calculate_start.return_value = datetime(2021, 1, 1, 00, 00)
+
+        with patch('app.src.utils.helpers.datetime') as mock_datetime:
+            mock_datetime.now.return_value = result
+            mock_datetime.strftime.return_value = '2020-01-01 00:00:00'
+
+            start_date = get_command_execution_start(
+                execution_type,
+                execution_frequency,
+                [],
+                date_col,
+                slider_col
+            )
+
+            mock_calculate_start.assert_called_with(date_col, slider_col)
+            mock_st_text.assert_called_with('First execution on 2021-01-01 00:00:00.')
+
+            self.assertEqual(start_date, mock_calculate_start.return_value)
+
+    @patch('app.src.utils.helpers.st.text')
+    @patch('app.src.utils.helpers.calculate_execution_start')
+    def test_get_command_execution_start_daily_frequency(self,
+                                                         mock_calculate_start: MagicMock,
+                                                         mock_st_text: MagicMock):
+        """
+        GIVEN specific execution type and execution frequency
+        WHEN passed to the 'get_command_execution_start' function
+        THEN check correct execution start value is returned.
+        """
+        execution_type = "Scheduled"
+        execution_frequency = "Daily"
+        weekdays = ["Tue"]
+        date_col = MagicMock()
+        slider_col = MagicMock()
+        mock_calculate_start.return_value = datetime(2021, 1, 1, 00, 00)
+
+        with patch('app.src.utils.helpers.datetime') as mock_datetime:
+            mock_datetime.now.return_value = datetime(2021, 1, 1, 00, 00)
+            mock_datetime.strftime.return_value = '2020-01-01 00:00:00'
+            mock_datetime.weekday.return_value = 1
+
+            start_date = get_command_execution_start(
+                execution_type,
+                execution_frequency,
+                weekdays,
+                date_col,
+                slider_col
+            )
+
+            self.assertEqual(start_date, datetime(2021, 1, 5, 0, 0))
+
+
+
 
 
 
