@@ -1001,6 +1001,7 @@ class UtilFunctionsTestCase(unittest.TestCase):
         WHEN passed to the 'get_command_execution_start' function
         THEN check correct execution start value is returned.
         """
+        mock_st_text.return_value = True
         execution_type = "Scheduled"
         execution_frequency = "Daily"
         weekdays = ["Tue"]
