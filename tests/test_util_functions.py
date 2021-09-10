@@ -37,7 +37,8 @@ from app.src.utils.helpers import (
     process_should_execute,
     app_exception_handler,
     create_folder_if_not_exists,
-    test_command_run
+    test_command_run,
+    get_time_interval_info
 )
 from app.settings.consts import WEEK_DAYS, FORMAT, DEFAULT_LOG_DIR_OUT
 
@@ -831,6 +832,22 @@ class UtilFunctionsTestCase(unittest.TestCase):
         mock_terminate_process.assert_called_with(
             mock_launch_process.return_value.pid
         )
+
+    def test_get_time_interval_info(self):
+        """
+        GIVEN mocked Streamlit column widgets
+        WHEN passed to the 'get_time_interval_info' function
+        THEN check that correct time values are returned.
+        """
+        col1 = MagicMock()
+        col2 = MagicMock()
+        col1.selectbox.return_value = "Minutes"
+        col2.slider.return_value = 5
+
+        selected_time, selected_quantity = get_time_interval_info(col1, col2)
+
+        self.assertEqual(selected_time, col1.selectbox.return_value)
+        self.assertEqual(selected_quantity, col2.slider.return_value)
 
 
 
