@@ -144,7 +144,8 @@ def test_command_run(command: str) -> None:
 
 
 def get_time_interval_info(unit_col: DeltaGenerator,
-                           slider_col: DeltaGenerator) -> Tuple[Optional[str], Optional[int]]:
+                           slider_col: DeltaGenerator
+                           ) -> Tuple[Optional[str], Optional[int]]:
     """
     Get execution frequency information from UI inputs.
 
@@ -183,7 +184,8 @@ def select_weekdays(unit_col: DeltaGenerator) -> Optional[List[str]]:
     )
 
 
-def get_execution_interval_information(execution_frequency: str, unit_col: DeltaGenerator,
+def get_execution_interval_information(execution_frequency: str,
+                                       unit_col: DeltaGenerator,
                                        slider_col: DeltaGenerator
                                        ) -> Tuple[Optional[str], Optional[int], Optional[List[str]]]:
     """

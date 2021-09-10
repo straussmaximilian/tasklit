@@ -38,7 +38,9 @@ from app.src.utils.helpers import (
     app_exception_handler,
     create_folder_if_not_exists,
     test_command_run,
-    get_time_interval_info
+    get_time_interval_info,
+    select_weekdays,
+    get_execution_interval_information
 )
 from app.settings.consts import WEEK_DAYS, FORMAT, DEFAULT_LOG_DIR_OUT
 
@@ -848,6 +850,100 @@ class UtilFunctionsTestCase(unittest.TestCase):
 
         self.assertEqual(selected_time, col1.selectbox.return_value)
         self.assertEqual(selected_quantity, col2.slider.return_value)
+
+    def test_select_weekdays(self):
+        """
+        GIVEN mocked Streamlit column widget
+        WHEN passed to the 'select_weekdays' function
+        THEN check that correct day of the week selection is returned.
+        """
+        col = MagicMock()
+        col.multiselect.return_value = "Tue"
+
+        self.assertEqual(select_weekdays(col), col.multiselect.return_value)
+
+    @patch('app.src.utils.helpers.select_weekdays')
+    @patch('app.src.utils.helpers.get_time_interval_info')
+    def test_get_execution_interval_information_interval(self,
+                                                         mock_time_info: MagicMock,
+                                                         mock_select: MagicMock):
+        """
+        GIVEN job execution 'Interval' frequency
+        WHEN passed to the 'get_execution_interval_information' function
+        THEN check that returned time interval information matches expected values.
+        """
+        frequency = "Interval"
+        col1 = MagicMock()
+        col2 = MagicMock()
+        mock_time_info.return_value = ("Weekly", 5)
+
+        unit, quantity, weekdays = get_execution_interval_information(
+            frequency,
+            col1,
+            col2
+        )
+
+        mock_time_info.assert_called_with(col1, col2)
+        mock_select.assert_not_called()
+
+        self.assertEqual(
+            unit,
+            mock_time_info.return_value[0]
+        )
+
+        self.assertEqual(
+            quantity,
+            mock_time_info.return_value[1]
+        )
+
+        self.assertEqual(
+            weekdays,
+            None
+        )
+
+    @patch('app.src.utils.helpers.select_weekdays')
+    @patch('app.src.utils.helpers.get_time_interval_info')
+    def test_get_execution_interval_information_daily(self,
+                                                      mock_time_info: MagicMock,
+                                                      mock_select: MagicMock):
+        """
+        GIVEN job execution 'Daily' frequency
+        WHEN passed to the 'get_execution_interval_information' function
+        THEN check that returned time interval information matches expected values.
+        """
+        frequency = "Daily"
+        col1 = MagicMock()
+        col2 = MagicMock()
+        mock_select.return_value = ["Tue"]
+
+        unit, quantity, weekdays = get_execution_interval_information(
+            frequency,
+            col1,
+            col2
+        )
+        mock_time_info.assert_not_called()
+        mock_select.assert_called_with(col1)
+
+        self.assertEqual(
+            unit,
+            None
+        )
+
+        self.assertEqual(
+            quantity,
+            None
+        )
+
+        self.assertEqual(
+            weekdays,
+            mock_select.return_value
+        )
+
+
+
+
+
+
 
 
 
