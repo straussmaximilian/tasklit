@@ -42,7 +42,8 @@ from app.src.utils.helpers import (
     select_weekdays,
     get_execution_interval_information,
     calculate_execution_start,
-    get_command_execution_start
+    get_command_execution_start,
+    match_duration
 )
 from app.settings.consts import WEEK_DAYS, FORMAT, DEFAULT_LOG_DIR_OUT
 
@@ -1024,10 +1025,29 @@ class UtilFunctionsTestCase(unittest.TestCase):
 
             self.assertEqual(start_date, datetime(2021, 1, 5, 0, 0))
 
+    def test_match_duration_unmatched(self):
+        """
+        GIVEN current datetime that does not exceed scheduling parameters
+        WHEN passed to the 'match_duration' function
+        THEN check decision is made to not execute the job.
+        """
+        now = datetime(2021, 1, 1, 00, 00)
+        start = datetime(2021, 1, 2, 00, 00)
+        duration = timedelta(1)
 
+        self.assertEqual(match_duration(now, start, duration), False)
 
+    def test_match_duration_matched(self):
+        """
+        GIVEN current datetime that exceeds scheduling parameters
+        WHEN passed to the 'get_command_execution_start' function
+        THEN check decision is made to execute the job.
+        """
+        now = datetime(2021, 1, 10, 00, 00)
+        start = datetime(2021, 1, 8, 00, 00)
+        duration = timedelta(1)
 
-
+        self.assertEqual(match_duration(now, start, duration), True)
 
 
 
