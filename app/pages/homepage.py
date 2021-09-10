@@ -20,6 +20,9 @@ def homepage() -> None:
     """
     Assemble necessary UI elements and helper methods to display application homepage.
     """
+    # Check if the log folder exists and - if not - create one.
+    helper_functions.create_folder_if_not_exists(settings.BASE_LOG_DIR)
+
     # Initialize sql alchemy engine to access process information
     engine = create_engine(settings.APP_ENGINE_PATH, echo=False)
 

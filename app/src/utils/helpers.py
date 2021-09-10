@@ -128,8 +128,6 @@ def test_command_run(command: str) -> None:
     Args:
         command: command to be executed by the process.
     """
-    create_folder_if_not_exists(settings.BASE_LOG_DIR)
-
     test_command_process = launch_command_process(command, settings.DEFAULT_LOG_DIR_OUT)
 
     stdout = st.empty()

@@ -35,9 +35,11 @@ from app.src.utils.helpers import (
     create_process_info_dataframe,
     write_job_execution_log,
     process_should_execute,
-    app_exception_handler
+    app_exception_handler,
+    create_folder_if_not_exists,
+    test_command_run
 )
-from app.settings.consts import WEEK_DAYS, FORMAT
+from app.settings.consts import WEEK_DAYS, FORMAT, DEFAULT_LOG_DIR_OUT
 
 
 class UtilFunctionsTestCase(unittest.TestCase):
@@ -760,6 +762,80 @@ class UtilFunctionsTestCase(unittest.TestCase):
 
         mock_refresh_app.assert_called_with(5)
         mock_st_error.assert_called_with('An error was caught: Exception was raised.')
+
+    @patch('pathlib.Path.mkdir')
+    @patch('os.path.exists')
+    def test_create_folder_if_not_exists(self,
+                                                        mock_path_exists: MagicMock,
+                                                        mock_create: MagicMock):
+        """
+        GIVEN a filepath to a missing folder
+        WHEN passed to the 'create_folder_if_not_exists' function
+        THEN check that related folder creation methods are called.
+        """
+        mock_path_exists.return_value = False
+
+        create_folder_if_not_exists("test_folder")
+
+        mock_path_exists.assert_called()
+        mock_create.assert_called()
+
+    @patch('pathlib.Path.mkdir')
+    @patch('os.path.exists')
+    def test_create_folder_if_not_exists_folder_exists(self,
+                                                       mock_path_exists: MagicMock,
+                                                       mock_create: MagicMock):
+        """
+        GIVEN a filepath to an existing folder
+        WHEN passed to the 'create_folder_if_not_exists' function
+        THEN check that related folder creation methods are NOT called.
+        """
+        mock_path_exists.return_value = True
+
+        create_folder_if_not_exists("test_folder")
+
+        mock_path_exists.assert_called()
+        mock_create.assert_not_called()
+
+    @patch('app.src.utils.helpers.st.checkbox')
+    @patch('app.src.utils.helpers.st.empty')
+    @patch('app.src.utils.helpers.read_log')
+    @patch('app.src.utils.helpers.terminate_process')
+    @patch('app.src.utils.helpers.launch_command_process')
+    def test_test_command_run(self,
+                              mock_launch_process: MagicMock,
+                              mock_terminate_process: MagicMock,
+                              mock_read_log: MagicMock,
+                              mock_st_empty: MagicMock,
+                              mock_st_checkbox: MagicMock):
+        """
+        GIVEN a command to test
+        WHEN passed to the 'test_command_run' function
+        THEN check that related test commands are called and
+        the test process is terminated when the 'stop' button is pressed.
+        """
+        mock_st_checkbox.return_value = True
+        mock_launch_process.poll.return_value = None
+        mock_launch_process.return_value.pid = 123
+        mock_read_log.return_value = ["Log file", " Contents"]
+        mock_st_empty.return_value.code.return_value = lambda x: x
+
+        test_command_run(self.test_command)
+
+        mock_st_empty.assert_called()
+        mock_st_checkbox.assert_called()
+        mock_read_log.assert_called_with(DEFAULT_LOG_DIR_OUT)
+        mock_st_empty.return_value.code.assert_called_with(
+            "".join(mock_read_log.return_value)
+        )
+        mock_terminate_process.assert_called_with(
+            mock_launch_process.return_value.pid
+        )
+
+
+
+
+
 
 
 
