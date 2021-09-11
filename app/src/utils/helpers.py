@@ -1,5 +1,6 @@
 import os
 import sys
+import traceback
 import time
 
 from datetime import datetime, timedelta
@@ -43,9 +44,8 @@ def app_exception_handler(func: Callable) -> Callable:
     def inner(*args, **kwargs):
         try:
             func(*args, **kwargs)
-        except Exception as exc:
-            st.error(f"An error was caught: {exc}")
-            refresh_app(5)
+        except Exception:
+            st.error(traceback.format_exc())
 
     return inner
 
@@ -68,8 +68,8 @@ def launch_command_process(command: str, log_filepath: str) -> Popen:
     try:
         with open(log_filepath, "w") as out:
             return Popen(command.split(" "), stdout=out, stderr=out)
-    except OSError:
-        raise
+    except OSError as exc:
+        raise exc
 
 
 def terminate_child_processes(parent_process: psutil.Process) -> None:
@@ -104,8 +104,8 @@ def terminate_process(pid: int) -> None:
         terminate_child_processes(parent)
         parent.terminate()
         parent.kill()
-    except psutil.NoSuchProcess:
-        raise
+    except psutil.NoSuchProcess as exc:
+        raise exc
 
 
 def create_folder_if_not_exists(folder_name: str) -> None:
@@ -309,8 +309,8 @@ def match_weekday(now: datetime,
     try:
         if not weekdays or settings.WEEK_DAYS[today] in weekdays:
             return True
-    except KeyError:
-        raise
+    except KeyError as exc:
+        raise exc
 
     return False
 
@@ -373,8 +373,8 @@ def write_job_execution_log(job_name: str, command: str, now: datetime, msg: str
                 if suffix == "_stdout.txt":
                     file.write(f"\n{'=' * 70} \n")
                 file.write(f"{now_str} {msg} {command}\n")
-        except OSError:
-            raise
+        except OSError as exc:
+            raise exc
 
 
 def execute_job(command: str, log_filepath: str,
@@ -409,8 +409,13 @@ def get_interval_duration(time_unit: str, time_unit_quantity: Optional[int],
     Returns:
         timedelta: time interval to wait before next schedule.
     """
-    return timedelta(days=1) if weekdays else \
-        settings.DATE_TRANSLATION[time_unit] * time_unit_quantity
+    try:
+        return timedelta(days=1) if weekdays else \
+            settings.DATE_TRANSLATION[time_unit] * time_unit_quantity
+    except KeyError:
+        # KeyError will be thrown on initial render when
+        # weekdays == time_unit == None -> we can just pass.
+        pass
 
 
 def schedule_process_job(command: str, job_name: str, start: datetime,
@@ -503,8 +508,8 @@ def save_df_to_sql(df: pd.DataFrame, sql_engine: engine) -> None:
     """
     try:
         df.to_sql("processes", con=sql_engine, if_exists="append", index=False)
-    except OperationalError:
-        raise
+    except OperationalError as exc:
+        raise exc
 
 
 def start_scheduler_process(command: str, job_name: str, start: datetime,
@@ -583,8 +588,8 @@ def read_log(filename: str) -> List[str]:
     try:
         with open(filename, "r", encoding="utf-8") as reader:
             return reader.readlines()
-    except FileNotFoundError:
-        raise
+    except FileNotFoundError as exc:
+        raise exc
 
 
 def get_task_id(df: pd.DataFrame) -> int:
@@ -609,10 +614,6 @@ def check_last_process_info_update(job_name: str) -> Optional[datetime]:
 
     Args:
         job_name: name of the job for which to perform the check.
-
-    Raises:
-        OSError if the file does not exist or is inaccessible.
-        OSError is raised by os.path.getmtime.
 
     Returns:
         datetime: last modified timestamp.
@@ -651,8 +652,8 @@ def get_process_df(sql_engine: engine) -> pd.DataFrame:
         df = pd.read_sql_table("processes", con=sql_engine)
     except ValueError:
         df = pd.DataFrame(settings.FORMAT)
-    except OperationalError:
-        raise
+    except OperationalError as exc:
+        raise exc
 
     return df
 

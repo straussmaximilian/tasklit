@@ -41,9 +41,7 @@ def layout_homepage_define_new_task(process_df, sql_engine) -> None:
             frequency, unit_select_col, slider_select_col
         )
 
-        interval_duration = helper_functions.get_interval_duration(
-            weekdays, time_unit, time_unit_quantity
-        )
+        interval_duration = helper_functions.get_interval_duration(time_unit, time_unit_quantity, weekdays)
 
         # Get execution start date settings
         execution_schedule_col, date_input_col, time_slider_col = st.columns(3)
