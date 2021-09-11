@@ -410,12 +410,10 @@ def get_interval_duration(time_unit: str, time_unit_quantity: Optional[int],
         timedelta: time interval to wait before next schedule.
     """
     try:
-        return timedelta(days=1) if weekdays else \
+        return timedelta(days=1) if weekdays or not time_unit else \
             settings.DATE_TRANSLATION[time_unit] * time_unit_quantity
-    except KeyError:
-        # KeyError will be thrown on initial render when
-        # weekdays == time_unit == None -> we can just pass.
-        pass
+    except KeyError as exc:
+        raise exc
 
 
 def schedule_process_job(command: str, job_name: str, start: datetime,

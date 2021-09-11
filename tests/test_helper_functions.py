@@ -756,22 +756,19 @@ class UtilFunctionsTestCase(unittest.TestCase):
         mock_st_error.assert_not_called()
 
     @patch('app.src.utils.helpers.st.error')
-    @patch('app.src.utils.helpers.refresh_app')
+    @patch('app.src.utils.helpers.traceback.format_exc')
     def test_app_exception_handler_raises_error(self,
-                                                mock_refresh_app: MagicMock,
+                                                mock_format_exc: MagicMock,
                                                 mock_st_error: MagicMock):
         """
         GIVEN a function defined with the exception handler decorator
         WHEN this function is called with triggering an exception
         THEN check that decorator exception handling methods are called.
         """
-        mock_refresh_app.return_value = True
-        mock_st_error.return_value = True
-
         self.decorated_test_func(True)
 
-        mock_refresh_app.assert_called_with(5)
-        mock_st_error.assert_called_with('An error was caught: Exception was raised.')
+        mock_format_exc.assert_called()
+        mock_st_error.assert_called()
 
     @patch('pathlib.Path.mkdir')
     @patch('os.path.exists')
@@ -1093,7 +1090,7 @@ class UtilFunctionsTestCase(unittest.TestCase):
                                        mock_sleep: MagicMock):
         """
         GIVEN parameters for launching a scheduler process
-        WHEN passed to the 'scheduler_process' function
+        WHEN passed to the 'schedule_process_job' function
         THEN check that the function correctly decides on whether
             to execute the job once or multiple times.
         """
@@ -1137,6 +1134,22 @@ class UtilFunctionsTestCase(unittest.TestCase):
             timedelta(days=1)
         )
 
+    def test_get_interval_duration_raises_error(self):
+        """
+        GIVEN a time unit that cannot be matched to pre-defined duration
+        WHEN passed to the 'get_interval_duration' function
+        THEN check that an error is raised.
+        """
+        with self.assertRaises(KeyError):
+            self.assertEqual(
+                get_interval_duration(
+                    "Weekly",
+                    1,
+                    []
+                ),
+                timedelta(days=1)
+            )
+
     def test_get_interval_duration_time_unit(self):
         """
         GIVEN no selected weekdays
@@ -1152,3 +1165,35 @@ class UtilFunctionsTestCase(unittest.TestCase):
             ),
             timedelta(days=7)
         )
+
+    @patch('app.src.utils.helpers.time.sleep', side_effect=InterruptedError)
+    @patch('app.src.utils.helpers.process_should_execute')
+    @patch('app.src.utils.helpers.execute_job')
+    def test_schedule_process_job_sleep(self,
+                                        mock_execute: MagicMock,
+                                        mock_should_execute: MagicMock,
+                                        mock_sleep: MagicMock):
+        """
+        GIVEN parameters for launching a scheduler process
+        WHEN passed to the 'schedule_process_job' function
+        THEN check that correct decision to wait is taken
+            based on the result of the process_should_execute check.
+        """
+        execution_frequency = "Daily"
+        execution_type = "Now"
+        mock_should_execute.return_value = False
+
+        with patch('app.src.utils.helpers.datetime') as mock_datetime:
+            mock_datetime.now.return_value = self.now_datetime
+
+            with self.assertRaises(InterruptedError):
+
+                schedule_process_job(
+                    self.test_command,
+                    self.test_job_name,
+                    self.now_datetime,
+                    timedelta(days=1),
+                    None,
+                    execution_frequency,
+                    execution_type
+                )
