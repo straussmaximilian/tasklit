@@ -59,6 +59,26 @@ class UtilFunctionsTestCase(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls) -> None:
+        """
+        test_log_filename: str
+            Sample log filename.
+        log_readlines_output: List[str]
+            Sample output of file.readlines()
+        test_job_name: str
+            Sample job name.
+        test_process_id: str
+            Sample process id.
+        task_ids: str
+            Sample task IDs.
+        test_df: pd.DataFrame
+            Sample dataframe to mimick df with process information.
+        test_command: str
+            Sample test command.
+        stdout_log_filepath: str
+            Sample filepath to the process stdout log file.
+        now_datetime: datetime
+            Sample output of datetime.now().
+        """
         super(UtilFunctionsTestCase, cls).setUpClass()
         cls.test_log_filename = "sample_logfile.txt"
         cls.log_readlines_output = ["Line of text"]
