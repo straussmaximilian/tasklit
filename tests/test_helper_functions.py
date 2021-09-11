@@ -1197,3 +1197,34 @@ class UtilFunctionsTestCase(unittest.TestCase):
                     execution_frequency,
                     execution_type
                 )
+
+    @patch('app.src.utils.helpers.time.sleep')
+    @patch('app.src.utils.helpers.process_should_execute')
+    @patch('app.src.utils.helpers.execute_job', side_effect=InterruptedError)
+    def test_schedule_process_job_execute(self,
+                                          mock_execute: MagicMock,
+                                          mock_should_execute: MagicMock,
+                                          mock_sleep: MagicMock):
+        """
+        GIVEN parameters for launching a scheduler process
+        WHEN passed to the 'schedule_process_job' function
+        THEN check that correct decision is taken to execute the process.
+        """
+        execution_frequency = "Daily"
+        execution_type = "Now"
+        mock_should_execute.return_value = True
+
+        with patch('app.src.utils.helpers.datetime') as mock_datetime:
+            mock_datetime.now.return_value = self.now_datetime
+
+            with self.assertRaises(InterruptedError):
+
+                schedule_process_job(
+                    self.test_command,
+                    self.test_job_name,
+                    self.now_datetime,
+                    timedelta(days=1),
+                    None,
+                    execution_frequency,
+                    execution_type
+                )
