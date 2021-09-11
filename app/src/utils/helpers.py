@@ -396,6 +396,23 @@ def execute_job(command: str, log_filepath: str,
     write_job_execution_log(job_name, command, now, "Executed")
 
 
+def get_interval_duration(time_unit: str, time_unit_quantity: Optional[int],
+                          weekdays: Optional[List[str]]) -> timedelta:
+    """
+    Get the waiting interval to wait for until the next job execution.
+
+    Args:
+        time_unit: (optional) unit of execution time interval, e.g. 'hours', 'days', etc.
+        time_unit_quantity: (optional) amount of time interval units.
+        weekdays: (optional) list with selected weekdays.
+
+    Returns:
+        timedelta: time interval to wait before next schedule.
+    """
+    return timedelta(days=1) if weekdays else \
+        settings.DATE_TRANSLATION[time_unit] * time_unit_quantity
+
+
 def launch_scheduler_process(command: str, job_name: str, start: datetime,
                              time_unit: Optional[str], time_unit_quantity: Optional[int],
                              weekdays: Optional[List[str]], execution_frequency: str,
@@ -420,8 +437,7 @@ def launch_scheduler_process(command: str, job_name: str, start: datetime,
         execute_job(command, stdout_log_file, job_name, datetime.now())
         return
 
-    interval_duration = timedelta(days=1) if weekdays else \
-        settings.DATE_TRANSLATION[time_unit] * time_unit_quantity
+    interval_duration = get_interval_duration(weekdays, time_unit, time_unit_quantity)
 
     # If process must be executed now, decrease start date by interval timedelta:
     # this way 'match_duration' will return True in the 'process_should_execute' check.

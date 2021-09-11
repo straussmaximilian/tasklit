@@ -4,11 +4,10 @@ import socket
 
 import streamlit as st
 
-from sqlalchemy import create_engine
+from sqlalchemy import engine
 
 sys.path.append((os.path.dirname(os.path.dirname(__file__))))
 
-import settings.consts as settings
 import src.utils.helpers as helper_functions
 
 from pages.layouts.homepage_new_task import layout_homepage_define_new_task
@@ -16,22 +15,19 @@ from pages.layouts.homepage_explore_task import layout_homepage_explore_task
 
 
 @helper_functions.app_exception_handler
-def homepage() -> None:
+def homepage(sql_engine: engine) -> None:
     """
     Assemble necessary UI elements and helper methods to display application homepage.
+
+    Args:
+        sql_engine: sql alchemy engine to use for accessing DB file.
     """
-    # Check if the log folder exists and - if not - create one.
-    helper_functions.create_folder_if_not_exists(settings.BASE_LOG_DIR)
-
-    # Initialize sql alchemy engine to access process information
-    engine = create_engine(settings.APP_ENGINE_PATH, echo=False)
-
     # Set app headers
     st.write("# 🕙 Tasklit")
     st.text(f"A browser-based task scheduling system. Running on {socket.gethostname()}.")
 
     # Prepare and display process dataframe
-    process_df = helper_functions.get_process_df(engine)
+    process_df = helper_functions.get_process_df(sql_engine)
     helper_functions.update_process_status_info(process_df)
     helper_functions.update_df_process_last_update_info(process_df)
     st.table(process_df)
@@ -41,12 +37,12 @@ def homepage() -> None:
     if len(process_df) and False in process_df["running"].values:
         if st.button("Remove processes that are not running."):
             running = process_df[process_df["running"]]
-            running.to_sql("processes", con=engine, if_exists="replace", index=False)
+            running.to_sql("processes", con=sql_engine, if_exists="replace", index=False)
 
             helper_functions.refresh_app()
 
     # Render and handle UI elements for defining new tasks
-    layout_homepage_define_new_task(process_df, engine)
+    layout_homepage_define_new_task(process_df, sql_engine)
 
     # Render and handle UI elements for exploring existing tasks
     layout_homepage_explore_task(process_df)

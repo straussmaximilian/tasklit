@@ -45,7 +45,8 @@ from app.src.utils.helpers import (
     get_command_execution_start,
     match_duration,
     launch_scheduler_process,
-    execute_job
+    execute_job,
+    get_interval_duration
 )
 from app.settings.consts import WEEK_DAYS, FORMAT, DEFAULT_LOG_DIR_OUT
 
@@ -699,8 +700,7 @@ class UtilFunctionsTestCase(unittest.TestCase):
         """
         GIVEN current daytime information
         WHEN passed to the 'test_process_should_execute' function
-        THEN check that a decision is made to execute the process
-        if both checks pass.
+        THEN check that a decision is made to execute the process if both checks pass.
         """
         mock_match_weekday.return_value = True
         mock_match_duration.return_value = True
@@ -723,7 +723,7 @@ class UtilFunctionsTestCase(unittest.TestCase):
         GIVEN current daytime information
         WHEN passed to the 'test_process_should_execute' function
         THEN check that a decision is made to NOT execute the process if
-        at least one of the checks fails.
+            at least one of the checks fails.
         """
         mock_match_weekday.return_value = True
         mock_match_duration.return_value = False
@@ -822,7 +822,7 @@ class UtilFunctionsTestCase(unittest.TestCase):
         GIVEN a command to test
         WHEN passed to the 'test_command_run' function
         THEN check that related test commands are called and
-        the test process is terminated when the 'stop' button is pressed.
+            the test process is terminated when the 'stop' button is pressed.
         """
         mock_st_checkbox.return_value = True
         mock_launch_process.poll.return_value = None
@@ -1095,7 +1095,7 @@ class UtilFunctionsTestCase(unittest.TestCase):
         GIVEN parameters for launching a scheduler process
         WHEN passed to the 'scheduler_process' function
         THEN check that the function correctly decides on whether
-        to execute the job once or multiple times.
+            to execute the job once or multiple times.
         """
         execution_frequency = "Once"
         execution_type = ""
@@ -1122,3 +1122,34 @@ class UtilFunctionsTestCase(unittest.TestCase):
             )
             mock_should_execute.assert_not_called()
             mock_sleep.assert_not_called()
+
+    def test_get_interval_duration_weekdays(self):
+        """
+        GIVEN selected weekdays
+        WHEN passed to the 'get_interval_duration' function
+        THEN check that appropriate waiting time interval is returned.
+        """
+        self.assertEqual(
+            get_interval_duration(
+                "Days",
+                1,
+                ["Tue"]
+            ),
+            timedelta(days=1)
+        )
+
+    def test_get_interval_duration_time_unit(self):
+        """
+        GIVEN no selected weekdays
+        WHEN passed to the 'get_interval_duration' function
+        THEN check that returned time interval is calculated based on
+            provided time unit and quantity.
+        """
+        self.assertEqual(
+            get_interval_duration(
+                "Weeks",
+                1,
+                []
+            ),
+            timedelta(days=7)
+        )
