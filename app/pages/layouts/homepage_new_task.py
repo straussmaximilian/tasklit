@@ -36,8 +36,13 @@ def layout_homepage_define_new_task(process_df, sql_engine) -> None:
                 settings.DAILY_FREQUENCY
             )
         )
-        unit, quantity, weekdays = helper_functions.get_execution_interval_information(
+
+        time_unit, time_unit_quantity, weekdays = helper_functions.get_execution_interval_information(
             frequency, unit_select_col, slider_select_col
+        )
+
+        interval_duration = helper_functions.get_interval_duration(
+            weekdays, time_unit, time_unit_quantity
         )
 
         # Get execution start date settings
@@ -58,8 +63,7 @@ def layout_homepage_define_new_task(process_df, sql_engine) -> None:
                 command,
                 job_name,
                 start,
-                unit,
-                quantity,
+                interval_duration,
                 weekdays,
                 frequency,
                 execution,

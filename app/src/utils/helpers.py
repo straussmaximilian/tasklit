@@ -413,10 +413,9 @@ def get_interval_duration(time_unit: str, time_unit_quantity: Optional[int],
         settings.DATE_TRANSLATION[time_unit] * time_unit_quantity
 
 
-def launch_scheduler_process(command: str, job_name: str, start: datetime,
-                             time_unit: Optional[str], time_unit_quantity: Optional[int],
-                             weekdays: Optional[List[str]], execution_frequency: str,
-                             execution_type: str) -> None:
+def schedule_process_job(command: str, job_name: str, start: datetime,
+                         interval_duration: timedelta, weekdays: Optional[List[str]],
+                         execution_frequency: str, execution_type: str) -> None:
     """
     Launch a scheduler process that spawns job execution processes if launch conditions are met.
     Checks for current date. If date criterion is met -> start the process with command execution.
@@ -425,8 +424,7 @@ def launch_scheduler_process(command: str, job_name: str, start: datetime,
         command: command to be executed.
         job_name: name generated for the job.
         start: execution datetime.
-        time_unit: (optional) unit of execution time interval, e.g. 'hours', 'days', etc.
-        time_unit_quantity: (optional) amount of time interval units.
+        interval_duration: interval to wait before scheduling the next job execution.
         weekdays: (optional) list with selected weekdays.
         execution_frequency: frequency of execution: "Interval" / "Daily"
         execution_type: type of execution schedule: is execution "Scheduled" or not.
@@ -436,8 +434,6 @@ def launch_scheduler_process(command: str, job_name: str, start: datetime,
     if execution_frequency == "Once":
         execute_job(command, stdout_log_file, job_name, datetime.now())
         return
-
-    interval_duration = get_interval_duration(weekdays, time_unit, time_unit_quantity)
 
     # If process must be executed now, decrease start date by interval timedelta:
     # this way 'match_duration' will return True in the 'process_should_execute' check.
@@ -511,9 +507,9 @@ def save_df_to_sql(df: pd.DataFrame, sql_engine: engine) -> None:
         raise
 
 
-def start_process(command: str, job_name: str, start: datetime,
-                  time_unit: Optional[str], time_unit_quantity: Optional[int], weekdays: Optional[List[str]],
-                  execution_frequency: str, execution_type: str) -> int:
+def start_scheduler_process(command: str, job_name: str, start: datetime,
+                            interval_duration: timedelta, weekdays: Optional[List[str]],
+                            execution_frequency: str, execution_type: str) -> int:
     """
     Run a process with the selected parameters.
 
@@ -521,8 +517,7 @@ def start_process(command: str, job_name: str, start: datetime,
         command: command to be executed.
         job_name: name allocated for the process job.
         start: execution datetime.
-        time_unit: (optional) unit of execution time interval, e.g. 'hours', 'days', etc.
-        time_unit_quantity: (optional) amount of time interval units.
+        interval_duration: interval to wait before scheduling the next job execution.
         weekdays: (optional) list with selected weekdays.
         execution_frequency: frequency of execution: "Interval" / "Daily"
         execution_type: type of execution schedule: is execution "Scheduled" or not.
@@ -531,13 +526,12 @@ def start_process(command: str, job_name: str, start: datetime,
         ID of the started process.
     """
     process = Process(
-        target=launch_scheduler_process,
+        target=schedule_process_job,
         args=(
             command,
             job_name,
             start,
-            time_unit,
-            time_unit_quantity,
+            interval_duration,
             weekdays,
             execution_frequency,
             execution_type
@@ -550,9 +544,9 @@ def start_process(command: str, job_name: str, start: datetime,
 
 
 def submit_job(command: str, job_name: str, start: datetime,
-               time_unit: Optional[str], time_unit_quantity: Optional[int],
-               weekdays: Optional[List[str]], execution_frequency: str,
-               execution_type: str, task_id: int, sql_engine: engine) -> None:
+               interval_duration: timedelta, weekdays: Optional[List[str]],
+               execution_frequency: str, execution_type: str,
+               task_id: int, sql_engine: engine) -> None:
     """
     Run a process job and save related process information to an SQL alchemy file.
 
@@ -560,16 +554,15 @@ def submit_job(command: str, job_name: str, start: datetime,
         command: command executed by the process.
         job_name: job name allocated for the process.
         start: start date of the job.
-        time_unit: (optional) unit of execution time interval, e.g. 'hours', 'days', etc.
-        time_unit_quantity: (optional) amount of time interval units.
+        interval_duration: interval to wait before scheduling the next job execution.
         weekdays: (optional) list with selected weekdays.
         execution_frequency: frequency of execution: "Interval" / "Daily"
         execution_type: type of execution schedule: is execution "Scheduled" or not.
         task_id: task ID.
         sql_engine: sql engine to use for saving DF information to sql.
     """
-    started_process_id = start_process(command, job_name, start, time_unit, time_unit_quantity,
-                                       weekdays, execution_frequency, execution_type)
+    started_process_id = start_scheduler_process(command, job_name, start, interval_duration,
+                                                 weekdays, execution_frequency, execution_type)
     process_df = create_process_info_dataframe(command, job_name, started_process_id, task_id)
     save_df_to_sql(process_df, sql_engine)
 

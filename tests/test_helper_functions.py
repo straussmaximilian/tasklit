@@ -30,7 +30,7 @@ from app.src.utils.helpers import (
     get_process_df,
     update_process_status_info,
     submit_job,
-    start_process,
+    start_scheduler_process,
     save_df_to_sql,
     create_process_info_dataframe,
     write_job_execution_log,
@@ -44,7 +44,7 @@ from app.src.utils.helpers import (
     calculate_execution_start,
     get_command_execution_start,
     match_duration,
-    launch_scheduler_process,
+    schedule_process_job,
     execute_job,
     get_interval_duration
 )
@@ -530,7 +530,7 @@ class UtilFunctionsTestCase(unittest.TestCase):
 
     @patch('app.src.utils.helpers.save_df_to_sql')
     @patch('app.src.utils.helpers.create_process_info_dataframe')
-    @patch('app.src.utils.helpers.start_process')
+    @patch('app.src.utils.helpers.start_scheduler_process')
     def test_submit_job(self,
                         mock_start_process: MagicMock,
                         mock_create_df: MagicMock,
@@ -548,8 +548,7 @@ class UtilFunctionsTestCase(unittest.TestCase):
             "test",
             "test",
             datetime(2020, 1, 1),
-            None,
-            None,
+            timedelta(days=1),
             None,
             "test",
             "test",
@@ -561,8 +560,7 @@ class UtilFunctionsTestCase(unittest.TestCase):
             'test',
             'test',
             datetime(2020, 1, 1, 0, 0),
-            None,
-            None,
+            timedelta(days=1),
             None,
             'test',
             'test'
@@ -579,28 +577,30 @@ class UtilFunctionsTestCase(unittest.TestCase):
         )
 
     @patch('app.src.utils.helpers.Process')
-    def test_start_process(self,
-                           mock_process: MagicMock):
+    def test_start_scheduler_process(self,
+                                     mock_process: MagicMock):
         """
         GIVEN job execution parameters
         WHEN passed to the 'start_process' function
-        THEN check that a process is started and related process ID is returned.
+        THEN check that a scheduler process is started and related process ID is returned.
         """
         process_mock = MagicMock()
         process_mock.start = lambda: True
         process_mock.pid = 123
         mock_process.return_value = process_mock
 
-        self.assertEqual(start_process(
-            "test",
-            "test",
-            datetime(2020, 1, 1),
-            None,
-            None,
-            None,
-            "test",
-            "test"
-        ), process_mock.pid)
+        self.assertEqual(
+            start_scheduler_process(
+                "test",
+                "test",
+                datetime(2020, 1, 1),
+                timedelta(days=1),
+                None,
+                "test",
+                "test"
+            ),
+            process_mock.pid
+        )
 
     @patch('app.src.utils.helpers.pd.DataFrame')
     def test_save_df_to_sql(self,
@@ -776,8 +776,8 @@ class UtilFunctionsTestCase(unittest.TestCase):
     @patch('pathlib.Path.mkdir')
     @patch('os.path.exists')
     def test_create_folder_if_not_exists(self,
-                                                        mock_path_exists: MagicMock,
-                                                        mock_create: MagicMock):
+                                         mock_path_exists: MagicMock,
+                                         mock_create: MagicMock):
         """
         GIVEN a filepath to a missing folder
         WHEN passed to the 'create_folder_if_not_exists' function
@@ -1087,10 +1087,10 @@ class UtilFunctionsTestCase(unittest.TestCase):
     @patch('app.src.utils.helpers.time.sleep')
     @patch('app.src.utils.helpers.process_should_execute')
     @patch('app.src.utils.helpers.execute_job')
-    def test_scheduler_process_once(self,
-                                    mock_execute: MagicMock,
-                                    mock_should_execute: MagicMock,
-                                    mock_sleep: MagicMock):
+    def test_schedule_process_job_once(self,
+                                       mock_execute: MagicMock,
+                                       mock_should_execute: MagicMock,
+                                       mock_sleep: MagicMock):
         """
         GIVEN parameters for launching a scheduler process
         WHEN passed to the 'scheduler_process' function
@@ -1103,12 +1103,11 @@ class UtilFunctionsTestCase(unittest.TestCase):
         with patch('app.src.utils.helpers.datetime') as mock_datetime:
             mock_datetime.now.return_value = self.now_datetime
 
-            launch_scheduler_process(
+            schedule_process_job(
                 self.test_command,
                 self.test_job_name,
                 self.now_datetime,
-                None,
-                None,
+                timedelta(days=1),
                 None,
                 execution_frequency,
                 execution_type
