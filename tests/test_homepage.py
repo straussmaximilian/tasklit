@@ -104,5 +104,25 @@ class HomepageTestCase(unittest.TestCase):
         mock_df_to_sql.assert_called_with('processes', con='', if_exists='replace', index=False)
         mock_refresh.assert_called()
 
+    @patch('app.pages.homepage.layout_homepage_explore_task')
+    @patch('app.pages.homepage.layout_homepage_define_new_task')
+    @patch('app.pages.homepage.helper_functions.get_process_df')
+    def test_static_layouts(self,
+                            mock_get_df: MagicMock,
+                            mock_new_task: MagicMock,
+                            mock_explore_task: MagicMock):
+        """
+        GIVEN a dataframe with process information
+        WHEN 'homepage' function is called
+        THEN check that related static layout functions are called.
+        """
+        mock_get_df.return_value = self.test_df
+
+        homepage("sql_engine")
+
+        mock_new_task.assert_called_with(self.test_df, "sql_engine")
+        mock_explore_task.assert_called_with(self.test_df)
+
+
 
 
