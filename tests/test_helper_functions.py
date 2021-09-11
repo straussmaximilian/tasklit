@@ -48,6 +48,7 @@ from app.src.utils.helpers import (
     execute_job,
     get_interval_duration
 )
+from app.src.utils.job_names import get_job_name
 from app.settings.consts import WEEK_DAYS, FORMAT, DEFAULT_LOG_DIR_OUT
 
 
@@ -1228,3 +1229,13 @@ class UtilFunctionsTestCase(unittest.TestCase):
                     execution_frequency,
                     execution_type
                 )
+
+    @patch('app.src.utils.job_names.random.choice')
+    def test_get_job_name(self,
+                          mock_choice: MagicMock):
+        mock_choice.side_effect = ["jolly", "strauss"]
+        self.assertEqual(
+            get_job_name(),
+            "jolly_strauss"
+        )
+

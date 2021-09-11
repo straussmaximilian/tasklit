@@ -22,15 +22,22 @@ class HomepageTestCase(unittest.TestCase):
     @patch('app.pages.homepage.layout_homepage_explore_task')
     @patch('app.pages.homepage.layout_homepage_define_new_task')
     @patch('app.pages.homepage.st.table')
+    @patch('app.pages.homepage.socket.gethostname')
     @patch('app.pages.homepage.st.text')
     @patch('app.pages.homepage.st.write')
     def test_static_layout_elements_generated(self,
                                               mock_st_write: MagicMock,
                                               mock_st_text: MagicMock,
+                                              mock_get_hostname: MagicMock,
                                               mock_st_table: MagicMock,
                                               mock_define_task: MagicMock,
                                               mock_explore_task: MagicMock):
-        pass
+        mock_get_hostname.return_value = "Tasklit.pc"
+
+        homepage("")
+
+        mock_st_write.assert_called_with('# 🕙 Tasklit')
+        mock_st_text.assert_called_with('A browser-based task scheduling system. Running on Tasklit.pc.')
 
     @patch('app.src.utils.helpers.refresh_app')
     @patch('app.pages.homepage.st.button')
