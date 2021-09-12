@@ -119,6 +119,19 @@ def create_folder_if_not_exists(folder_name: str) -> None:
         Path(folder_name).mkdir(parents=True, exist_ok=True)
 
 
+def display_process_log_file(log_filename: str) -> str:
+    """
+    Display process log file in as Streamlit code output.
+
+    Args:
+        log_filename: string with log filename.
+    """
+    try:
+        return "".join(read_log(log_filename))
+    except FileNotFoundError:
+        return f"Waiting for {log_filename} to be created..."
+
+
 def test_command_run(command: str) -> None:
     """
     Utility function to test command execution. Open a subprocess with
@@ -129,16 +142,15 @@ def test_command_run(command: str) -> None:
         command: command to be executed by the process.
     """
     test_command_process = launch_command_process(command, settings.DEFAULT_LOG_DIR_OUT)
-
     stdout = st.empty()
     stop = st.checkbox("Stop")
 
     while True:
         poll = test_command_process.poll()
 
-        stdout.code("".join(read_log(settings.DEFAULT_LOG_DIR_OUT)))
+        stdout.code(display_process_log_file(settings.DEFAULT_LOG_DIR_OUT))
 
-        if stop or poll is not None:
+        if stop and poll is not None:
             terminate_process(test_command_process.pid)
             break
 
@@ -664,16 +676,3 @@ def update_df_process_last_update_info(df: pd.DataFrame) -> None:
         df: df with process information.
     """
     df["last update"] = df["job name"].apply(lambda x: check_last_process_info_update(x) if x else "")
-
-
-def display_process_log_file(log_filename) -> None:
-    """
-    Display process log file in as Streamlit code output.
-
-    Args:
-        log_filename: string with log filename.
-    """
-    try:
-        st.code("".join(read_log(log_filename)))
-    except FileNotFoundError:
-        st.write(f"{log_filename} does not exist.")

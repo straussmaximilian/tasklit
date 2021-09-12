@@ -71,7 +71,7 @@ class UtilFunctionsTestCase(unittest.TestCase):
         task_ids: str
             Sample task IDs.
         test_df: pd.DataFrame
-            Sample dataframe to mimick df with process information.
+            Sample dataframe to mimic df with process information.
         test_command: str
             Sample test command.
         stdout_log_filepath: str
@@ -407,49 +407,35 @@ class UtilFunctionsTestCase(unittest.TestCase):
             with self.assertRaises(OSError):
                 launch_command_process(self.test_command, self.test_log_filename)
 
-    @patch('app.src.utils.helpers.st.write')
-    @patch('app.src.utils.helpers.st.code')
     @patch('app.src.utils.helpers.read_log')
     def test_display_process_log_file_exists(self,
-                                             mock_read_log: MagicMock,
-                                             mock_st_code: MagicMock,
-                                             mock_st_write: MagicMock):
+                                             mock_read_log: MagicMock):
         """
         GIVEN a name of an existing log file
         WHEN passed to the 'display_process_log_file' function
         THEN check that the file is read and file contents are displayed.
         """
-        mock_st_code.return_value = True
-        mock_st_write.return_value = True
         mock_read_log.return_value = self.log_readlines_output
 
-        display_process_log_file(self.test_log_filename)
+        result = display_process_log_file(self.test_log_filename)
 
         mock_read_log.assert_called()
-        mock_st_code.assert_called_with("Line of text")
-        mock_st_write.assert_not_called()
+        self.assertEqual(result, "Line of text")
 
-    @patch('app.src.utils.helpers.st.write')
-    @patch('app.src.utils.helpers.st.code')
     @patch('app.src.utils.helpers.read_log')
     def test_display_process_log_file_missing(self,
-                                              mock_read_log: MagicMock,
-                                              mock_st_code: MagicMock,
-                                              mock_st_write: MagicMock):
+                                              mock_read_log: MagicMock):
         """
         GIVEN a name of a log file that doesn't exist
         WHEN passed to the 'display_process_log_file' function
-        THEN check that FileNotFoundError is triggered and an error message is logged.
+        THEN check that FileNotFoundError is triggered and a warning message is displayed.
         """
-        mock_st_code.return_value = True
-        mock_st_write.return_value = True
         mock_read_log.side_effect = FileNotFoundError("Log file is missing.")
 
-        display_process_log_file(self.test_log_filename)
+        result = display_process_log_file(self.test_log_filename)
 
         mock_read_log.assert_called()
-        mock_st_code.assert_not_called()
-        mock_st_write.assert_called_with("sample_logfile.txt does not exist.")
+        self.assertEqual(result, f"Waiting for {self.test_log_filename} to be created...")
 
     @patch('app.src.utils.helpers.check_last_process_info_update')
     def test_update_df_process_last_update_info(self,

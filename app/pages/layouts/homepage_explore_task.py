@@ -25,11 +25,19 @@ def layout_homepage_explore_task(process_df) -> None:
 
             # Display task execution log
             st.write("## Task Execution Log")
-            helper_functions.display_process_log_file(f"{settings.BASE_LOG_DIR}/{current_job_name}.txt")
+            st.code(
+                helper_functions.display_process_log_file(
+                    f"{settings.BASE_LOG_DIR}/{current_job_name}.txt"
+                )
+            )
 
             # Display task STDOUT log
             st.write("## Task Stdout Log")
-            helper_functions.display_process_log_file(f"{settings.BASE_LOG_DIR}/{current_job_name}_stdout.txt")
+            st.code(
+                helper_functions.display_process_log_file(
+                    f"{settings.BASE_LOG_DIR}/{current_job_name}_stdout.txt"
+                )
+            )
 
             if st.checkbox("Kill task"):
                 if st.button("Click to confirm"):

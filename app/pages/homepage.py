@@ -34,7 +34,7 @@ def homepage(sql_engine: engine) -> None:
 
     # In case process df has any processes that are no longer running (but still alive)
     # provide user an option to remove them.
-    if len(process_df) and False in process_df["running"].values:
+    if False in process_df["running"].values:
         if st.button("Remove processes that are not running."):
             running = process_df[process_df["running"]]
             running.to_sql("processes", con=sql_engine, if_exists="replace", index=False)
