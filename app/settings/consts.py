@@ -1,5 +1,5 @@
 from datetime import timedelta
-
+import os
 
 # DB Path
 APP_ENGINE_PATH = "sqlite:///app/process_data.db"
@@ -38,3 +38,8 @@ WEEK_DAYS = {
 # Log directories
 BASE_LOG_DIR = "./app/logs"
 DEFAULT_LOG_DIR_OUT = f"{BASE_LOG_DIR}/stdout.txt"
+
+if os.name == 'nt':
+    DEFAULT_TEST_COMMAND = 'ping 8.8.8.8'
+else:
+    DEFAULT_TEST_COMMAND = 'ping 8.8.8.8 -c 5'
