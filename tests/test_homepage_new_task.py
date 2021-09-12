@@ -1,5 +1,7 @@
 import unittest
 
+from datetime import timedelta
+
 from unittest.mock import (
     patch,
     MagicMock
@@ -34,6 +36,7 @@ class HomepageNewTaskTestCase(unittest.TestCase):
                 "running": [False],
             }
         )
+        cls.job_name = "sleepy_strauss"
 
     @patch('app.pages.layouts.homepage_new_task.helper_functions.refresh_app')
     @patch('app.pages.layouts.homepage_new_task.helper_functions.submit_job')
@@ -66,4 +69,61 @@ class HomepageNewTaskTestCase(unittest.TestCase):
 
         mock_st_info.assert_called_with(f"Running '{self.command}'")
         mock_test_command_run.assert_called_with(self.command)
-        
+
+    @patch('app.pages.layouts.homepage_new_task.helper_functions.refresh_app')
+    @patch('app.pages.layouts.homepage_new_task.helper_functions.submit_job')
+    @patch('app.pages.layouts.homepage_new_task.helper_functions.get_command_execution_start')
+    @patch('app.pages.layouts.homepage_new_task.helper_functions.get_interval_duration')
+    @patch('app.pages.layouts.homepage_new_task.helper_functions.get_execution_interval_information')
+    @patch('app.pages.layouts.homepage_new_task.st.columns')
+    @patch('app.pages.homepage.st.info')
+    @patch('app.pages.layouts.homepage_new_task.helper_functions.test_command_run')
+    @patch('app.pages.layouts.homepage_new_task.get_job_name')
+    @patch('app.pages.homepage.st.text_input')
+    @patch('app.pages.homepage.st.button')
+    def test_app_submit_command(self,
+                                mock_st_button: MagicMock,
+                                mock_st_input: MagicMock,
+                                mock_get_job_name: MagicMock,
+                                mock_test_command_run: MagicMock,
+                                mock_st_info: MagicMock,
+                                mock_st_cols: MagicMock,
+                                mock_get_interval_info: MagicMock,
+                                mock_get_duration: MagicMock,
+                                mock_execution_start: MagicMock,
+                                mock_submit: MagicMock,
+                                mock_refresh: MagicMock):
+        """
+        GIVEN job execution parameters
+        WHEN job 'submit' button is clicked
+        THEN check that the job is submitted with correct parameters.
+        """
+        col1 = col2 = col3 = MagicMock()
+        mock_st_button.return_value = True
+        mock_get_job_name.return_value = self.job_name
+        mock_st_input.side_effect = [
+            mock_get_job_name.return_value,
+            self.command
+        ]
+        mock_st_cols.return_value = (col1, col2, col3)
+        col3.selectbox.side_effect = ["Weekly", "Now"]
+        mock_get_interval_info.return_value = (None, None, ["Tue"])
+        mock_get_duration.return_value = timedelta(days=1)
+        mock_execution_start.return_value = "2020-02-01 00:00:00"
+
+        layout_homepage_define_new_task(self.test_df, "sql_engine")
+
+        mock_submit.assert_called_with(
+            self.command,
+            self.job_name,
+            mock_execution_start.return_value,
+            timedelta(days=1),
+            ['Tue'],
+            "Weekly",
+            "Now",
+            2,
+            'sql_engine'
+        )
+        mock_refresh.assert_called()
+
+
