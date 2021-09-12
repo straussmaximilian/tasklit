@@ -125,6 +125,9 @@ def display_process_log_file(log_filename: str) -> str:
 
     Args:
         log_filename: string with log filename.
+
+    Returns:
+        str: log file output.
     """
     try:
         return "".join(read_log(log_filename))
