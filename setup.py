@@ -16,6 +16,6 @@ setup(
     packages=find_packages(),
     install_requires=requirements,
     entry_points={
-        "console_scripts": ["tasklit=tasklit.main:run"],
+        "console_scripts": ["tasklit=tasklit.__main__:run"],
     },
 )

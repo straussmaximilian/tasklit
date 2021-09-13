@@ -7,7 +7,7 @@ from unittest.mock import (
 
 import pandas as pd
 
-from app.pages.homepage import homepage
+from tasklit.pages.homepage import homepage
 
 
 class HomepageTestCase(unittest.TestCase):
@@ -40,9 +40,9 @@ class HomepageTestCase(unittest.TestCase):
             }
         )
 
-    @patch('app.pages.homepage.socket.gethostname')
-    @patch('app.pages.homepage.st.text')
-    @patch('app.pages.homepage.st.write')
+    @patch('tasklit.pages.homepage.socket.gethostname')
+    @patch('tasklit.pages.homepage.st.text')
+    @patch('tasklit.pages.homepage.st.write')
     def test_app_header(self,
                         mock_st_write: MagicMock,
                         mock_st_text: MagicMock,
@@ -58,10 +58,10 @@ class HomepageTestCase(unittest.TestCase):
         mock_st_write.assert_called_with('# 🕙 Tasklit')
         mock_st_text.assert_called_with('A browser-based task scheduling system. Running on Tasklit.pc.')
 
-    @patch('app.pages.homepage.st.table')
-    @patch('app.pages.homepage.helper_functions.update_df_process_last_update_info')
-    @patch('app.pages.homepage.helper_functions.update_process_status_info')
-    @patch('app.pages.homepage.helper_functions.get_process_df')
+    @patch('tasklit.pages.homepage.st.table')
+    @patch('tasklit.pages.homepage.helper_functions.update_df_process_last_update_info')
+    @patch('tasklit.pages.homepage.helper_functions.update_process_status_info')
+    @patch('tasklit.pages.homepage.helper_functions.get_process_df')
     def test_display_process_df(self,
                                 mock_get_df: MagicMock,
                                 mock_update_status: MagicMock,
@@ -83,15 +83,15 @@ class HomepageTestCase(unittest.TestCase):
 
         mock_st_table.assert_called_with(test_df_copy)
 
-    @patch('app.pages.homepage.layout_homepage_explore_task')
-    @patch('app.pages.homepage.layout_homepage_define_new_task')
-    @patch('app.pages.homepage.helper_functions.refresh_app')
+    @patch('tasklit.pages.homepage.layout_homepage_explore_task')
+    @patch('tasklit.pages.homepage.layout_homepage_define_new_task')
+    @patch('tasklit.pages.homepage.helper_functions.refresh_app')
     @patch.object(pd.DataFrame, 'to_sql')
-    @patch('app.pages.homepage.st.button')
-    @patch('app.pages.homepage.st.table')
-    @patch('app.pages.homepage.helper_functions.update_df_process_last_update_info')
-    @patch('app.pages.homepage.helper_functions.update_process_status_info')
-    @patch('app.pages.homepage.helper_functions.get_process_df')
+    @patch('tasklit.pages.homepage.st.button')
+    @patch('tasklit.pages.homepage.st.table')
+    @patch('tasklit.pages.homepage.helper_functions.update_df_process_last_update_info')
+    @patch('tasklit.pages.homepage.helper_functions.update_process_status_info')
+    @patch('tasklit.pages.homepage.helper_functions.get_process_df')
     def test_remove_inactive_processes(self,
                                        mock_get_df: MagicMock,
                                        mock_update_status: MagicMock,
@@ -116,9 +116,9 @@ class HomepageTestCase(unittest.TestCase):
         mock_df_to_sql.assert_called_with('processes', con='', if_exists='replace', index=False)
         mock_refresh.assert_called()
 
-    @patch('app.pages.homepage.layout_homepage_explore_task')
-    @patch('app.pages.homepage.layout_homepage_define_new_task')
-    @patch('app.pages.homepage.helper_functions.get_process_df')
+    @patch('tasklit.pages.homepage.layout_homepage_explore_task')
+    @patch('tasklit.pages.homepage.layout_homepage_define_new_task')
+    @patch('tasklit.pages.homepage.helper_functions.get_process_df')
     def test_static_layouts(self,
                             mock_get_df: MagicMock,
                             mock_new_task: MagicMock,

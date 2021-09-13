@@ -9,7 +9,7 @@ from unittest.mock import (
 
 import pandas as pd
 
-from app.pages.layouts.homepage_new_task import layout_homepage_define_new_task
+from tasklit.pages.layouts.homepage_new_task import layout_homepage_define_new_task
 
 
 class HomepageNewTaskTestCase(unittest.TestCase):
@@ -38,13 +38,13 @@ class HomepageNewTaskTestCase(unittest.TestCase):
         )
         cls.job_name = "sleepy_strauss"
 
-    @patch('app.pages.layouts.homepage_new_task.helper_functions.refresh_app')
-    @patch('app.pages.layouts.homepage_new_task.helper_functions.submit_job')
-    @patch('app.pages.homepage.st.info')
-    @patch('app.pages.layouts.homepage_new_task.helper_functions.test_command_run')
-    @patch('app.pages.layouts.homepage_new_task.get_job_name')
-    @patch('app.pages.homepage.st.button')
-    @patch('app.pages.homepage.st.text_input')
+    @patch('tasklit.pages.layouts.homepage_new_task.helper_functions.refresh_app')
+    @patch('tasklit.pages.layouts.homepage_new_task.helper_functions.submit_job')
+    @patch('tasklit.pages.homepage.st.info')
+    @patch('tasklit.pages.layouts.homepage_new_task.helper_functions.test_command_run')
+    @patch('tasklit.pages.layouts.homepage_new_task.get_job_name')
+    @patch('tasklit.pages.homepage.st.button')
+    @patch('tasklit.pages.homepage.st.text_input')
     def test_app_running_test_command(self,
                                       mock_st_input: MagicMock,
                                       mock_st_button: MagicMock,
@@ -70,17 +70,17 @@ class HomepageNewTaskTestCase(unittest.TestCase):
         mock_st_info.assert_called_with(f"Running '{self.command}'")
         mock_test_command_run.assert_called_with(self.command)
 
-    @patch('app.pages.layouts.homepage_new_task.helper_functions.refresh_app')
-    @patch('app.pages.layouts.homepage_new_task.helper_functions.submit_job')
-    @patch('app.pages.layouts.homepage_new_task.helper_functions.get_command_execution_start')
-    @patch('app.pages.layouts.homepage_new_task.helper_functions.get_interval_duration')
-    @patch('app.pages.layouts.homepage_new_task.helper_functions.get_execution_interval_information')
-    @patch('app.pages.layouts.homepage_new_task.st.columns')
-    @patch('app.pages.homepage.st.info')
-    @patch('app.pages.layouts.homepage_new_task.helper_functions.test_command_run')
-    @patch('app.pages.layouts.homepage_new_task.get_job_name')
-    @patch('app.pages.homepage.st.text_input')
-    @patch('app.pages.homepage.st.button')
+    @patch('tasklit.pages.layouts.homepage_new_task.helper_functions.refresh_app')
+    @patch('tasklit.pages.layouts.homepage_new_task.helper_functions.submit_job')
+    @patch('tasklit.pages.layouts.homepage_new_task.helper_functions.get_command_execution_start')
+    @patch('tasklit.pages.layouts.homepage_new_task.helper_functions.get_interval_duration')
+    @patch('tasklit.pages.layouts.homepage_new_task.helper_functions.get_execution_interval_information')
+    @patch('tasklit.pages.layouts.homepage_new_task.st.columns')
+    @patch('tasklit.pages.homepage.st.info')
+    @patch('tasklit.pages.layouts.homepage_new_task.helper_functions.test_command_run')
+    @patch('tasklit.pages.layouts.homepage_new_task.get_job_name')
+    @patch('tasklit.pages.homepage.st.text_input')
+    @patch('tasklit.pages.homepage.st.button')
     def test_app_submit_command(self,
                                 mock_st_button: MagicMock,
                                 mock_st_input: MagicMock,

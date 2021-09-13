@@ -12,8 +12,10 @@ Too lazy to write cronjobs? Working on a headless system and want to have a GUI?
 `Tasklit` is a simple task scheduling application that allows you to schedule different processes via browser interface.
 
 ### Get started
-* install requirements (streamlit)
-* run the server `streamlit run app/main.py`
+
+* create an environment `conda create --name tasklit python=3.8`
+* install `pip install .`
+* run with `tasklit`
 * visit the website (default is `http://localhost:8501` or network ip)
 * Submit a new task. Example to run a test script on your desktop on a Mac system: `python \Users\username\Desktop\myscript.py`
 
@@ -27,4 +29,3 @@ Too lazy to write cronjobs? Working on a headless system and want to have a GUI?
 * Run tests via
   ```coverage run -m unittest discover tests```
 * Check test coverage via ```coverage report -m```
- 

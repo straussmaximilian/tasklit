@@ -2,8 +2,6 @@ import os
 import sys
 import streamlit as st
 
-sys.path.append((os.path.dirname(os.path.dirname(__file__))))
-
 import tasklit.settings.consts as settings
 import tasklit.src.utils.helpers as helper_functions
 
