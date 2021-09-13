@@ -6,12 +6,10 @@ import streamlit as st
 
 from sqlalchemy import engine
 
-sys.path.append((os.path.dirname(os.path.dirname(__file__))))
+import tasklit.src.utils.helpers as helper_functions
 
-import src.utils.helpers as helper_functions
-
-from pages.layouts.homepage_new_task import layout_homepage_define_new_task
-from pages.layouts.homepage_explore_task import layout_homepage_explore_task
+from tasklit.pages.layouts.homepage_new_task import layout_homepage_define_new_task
+from tasklit.pages.layouts.homepage_explore_task import layout_homepage_explore_task
 
 
 @helper_functions.app_exception_handler

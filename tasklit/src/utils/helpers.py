@@ -22,9 +22,7 @@ from sqlalchemy import engine
 from sqlalchemy.exc import OperationalError
 from streamlit.delta_generator import DeltaGenerator
 
-sys.path.append(os.path.dirname((os.path.dirname(os.path.dirname(os.path.dirname(__file__))))))
-
-import app.settings.consts as settings
+import tasklit.settings.consts as settings
 
 
 def app_exception_handler(func: Callable) -> Callable:

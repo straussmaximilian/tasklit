@@ -2,11 +2,9 @@ import os
 import sys
 import streamlit as st
 
-sys.path.append((os.path.dirname(os.path.dirname(__file__))))
-
-import settings.consts as settings
-import src.utils.helpers as helper_functions
-from src.utils.job_names import get_job_name
+import tasklit.settings.consts as settings
+import tasklit.src.utils.helpers as helper_functions
+from tasklit.src.utils.job_names import get_job_name
 
 
 def layout_homepage_define_new_task(process_df, sql_engine) -> None:
