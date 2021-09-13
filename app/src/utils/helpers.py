@@ -115,8 +115,7 @@ def create_folder_if_not_exists(folder_name: str) -> None:
     Args:
         folder_name: name of the folder to be checked.
     """
-    if not os.path.exists(folder_name):
-        Path(folder_name).mkdir(parents=True, exist_ok=True)
+    Path(folder_name).mkdir(parents=True, exist_ok=True)
 
 
 def display_process_log_file(log_filename: str) -> str:

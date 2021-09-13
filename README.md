@@ -1,3 +1,7 @@
+[![codecov](https://codecov.io/gh/SecretLake/test-ci/branch/master/graph/badge.svg?token=6ZZHPQ76OO)](https://codecov.io/gh/SecretLake/test-ci)
+![tests](https://github.com/SecretLake/test-ci/actions/workflows/run_unittests_and_linting.yml/badge.svg?branch=main)
+
+
 # tasklit
 A browser-based task scheduling app build on streamlit.
 ![Demo](assets/demo.gif)
@@ -23,3 +27,4 @@ Too lazy to write cronjobs? Working on a headless system and want to have a GUI?
 * Run tests via
   ```coverage run -m unittest discover tests```
 * Check test coverage via ```coverage report -m```
+ 
