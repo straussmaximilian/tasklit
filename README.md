@@ -1,5 +1,5 @@
 [![codecov](https://codecov.io/gh/SecretLake/test-ci/branch/master/graph/badge.svg?token=6ZZHPQ76OO)](https://codecov.io/gh/SecretLake/test-ci)
-![tests](https://github.com/SecretLake/test-ci/actions/workflows/run_unittests_and_linting.yml/badge.svg?branch=master)
+![tests](https://github.com/SecretLake/test-ci/actions/workflows/run_unittests_and_linting.yml/badge.svg?branch=main)
 
 
 # tasklit
