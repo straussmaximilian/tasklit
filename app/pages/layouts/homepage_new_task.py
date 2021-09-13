@@ -20,7 +20,8 @@ def layout_homepage_define_new_task(process_df, sql_engine) -> None:
     with st.expander("New task"):
         job_name = st.text_input("Job name", get_job_name())
 
-        command = st.text_input("Enter command", "ping 8.8.8.8 -c 5")
+
+        command = st.text_input("Enter command", settings.DEFAULT_TEST_COMMAND)
 
         if command and st.button("Test command"):
             st.info(f"Running '{command}'")
