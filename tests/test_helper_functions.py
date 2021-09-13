@@ -778,38 +778,16 @@ class UtilFunctionsTestCase(unittest.TestCase):
         mock_st_error.assert_called()
 
     @patch('pathlib.Path.mkdir')
-    @patch('os.path.exists')
     def test_create_folder_if_not_exists(self,
-                                         mock_path_exists: MagicMock,
                                          mock_create: MagicMock):
         """
-        GIVEN a filepath to a missing folder
+        GIVEN a path to a log folder
         WHEN passed to the 'create_folder_if_not_exists' function
         THEN check that related folder creation methods are called.
         """
-        mock_path_exists.return_value = False
-
         create_folder_if_not_exists("test_folder")
 
-        mock_path_exists.assert_called()
         mock_create.assert_called()
-
-    @patch('pathlib.Path.mkdir')
-    @patch('os.path.exists')
-    def test_create_folder_if_not_exists_folder_exists(self,
-                                                       mock_path_exists: MagicMock,
-                                                       mock_create: MagicMock):
-        """
-        GIVEN a filepath to an existing folder
-        WHEN passed to the 'create_folder_if_not_exists' function
-        THEN check that related folder creation methods are NOT called.
-        """
-        mock_path_exists.return_value = True
-
-        create_folder_if_not_exists("test_folder")
-
-        mock_path_exists.assert_called()
-        mock_create.assert_not_called()
 
     @patch('app.src.utils.helpers.st.checkbox')
     @patch('app.src.utils.helpers.st.empty')
