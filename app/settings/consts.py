@@ -1,5 +1,6 @@
-from datetime import timedelta
 import os
+
+from datetime import timedelta
 
 # DB Path
 APP_ENGINE_PATH = "sqlite:///app/process_data.db"
