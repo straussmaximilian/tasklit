@@ -1,4 +1,4 @@
-[![codecov](https://codecov.io/gh/SecretLake/test-ci/branch/master/graph/badge.svg?token=6ZZHPQ76OO)](https://codecov.io/gh/SecretLake/test-ci)
+[![codecov](https://codecov.io/gh/straussmaximilian/tasklit/branch/main/graph/badge.svg?token=BW3L9GQ7M1)](https://codecov.io/gh/straussmaximilian/tasklit)
 ![tests](https://github.com/straussmaximilian/tasklit/actions/workflows/run_unittests_and_linting.yml/badge.svg?branch=main)
 
 

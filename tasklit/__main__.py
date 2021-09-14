@@ -1,7 +1,7 @@
-from streamlit import cli as stcli
 import os
 import sys
 
+from streamlit import cli as stcli
 
 def run():
     _this_file = os.path.abspath(__file__)

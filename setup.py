@@ -1,10 +1,9 @@
-from setuptools import setup, find_packages
 import tasklit
 
+from setuptools import setup, find_packages
+
 with open("requirements.txt") as requirements_file:
-    requirements = []
-    for line in requirements_file:
-        requirements.append(line)
+    requirements = [_ for _ in requirements_file]
 
 setup(
     name='tasklit',
