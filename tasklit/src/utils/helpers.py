@@ -22,6 +22,7 @@ from sqlalchemy.exc import OperationalError
 from streamlit.delta_generator import DeltaGenerator
 
 import tasklit.settings.consts as settings
+from tasklit.src.classes.stats import UsageTracker
 
 
 def app_exception_handler(func: Callable) -> Callable:
@@ -388,6 +389,7 @@ def write_job_execution_log(job_name: str, command: str, now: datetime, msg: str
             raise exc
 
 
+@UsageTracker
 def execute_job(command: str, log_filepath: str,
                 job_name: str, now: datetime) -> None:
     """
@@ -613,7 +615,7 @@ def get_task_id(df: pd.DataFrame) -> int:
     Returns:
         int: new task ID.
     """
-    return df["task_id"].max() + 1 if df["task_id"].values else 1
+    return df["task_id"].max() + 1 if df["task_id"].values.any() else 1
 
 
 def check_last_process_info_update(job_name: str) -> Optional[datetime]:
