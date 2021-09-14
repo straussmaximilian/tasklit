@@ -3,6 +3,7 @@ import sys
 
 from streamlit import cli as stcli
 
+
 def run():
     _this_file = os.path.abspath(__file__)
     _this_directory = os.path.dirname(_this_file)
@@ -16,5 +17,4 @@ def run():
 
 
 if __name__ == '__main__':
-
     run()

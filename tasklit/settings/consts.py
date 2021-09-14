@@ -2,15 +2,16 @@ import os
 
 from datetime import timedelta
 
-#Home dir
 
-HOME_DIR = os.path.join(os.path.expanduser ('~'),'.tasklit')
+# Home dir
+HOME_DIR = os.path.join(os.path.expanduser('~'), '.tasklit')
 
 if not os.path.isdir(HOME_DIR):
     os.mkdir(HOME_DIR)
 
 # DB Path
-APP_ENGINE_PATH = f"sqlite:///{HOME_DIR}/process_data.db"
+BASE_DATA_DIR = os.path.join(HOME_DIR, "data")
+APP_ENGINE_PATH = f"sqlite:///{BASE_DATA_DIR}/process.db"
 
 # Formats
 FORMAT = {
@@ -47,7 +48,5 @@ WEEK_DAYS = {
 BASE_LOG_DIR = os.path.join(HOME_DIR, "logs")
 DEFAULT_LOG_DIR_OUT = f"{BASE_LOG_DIR}/stdout.txt"
 
-if os.name == 'nt':
-    DEFAULT_TEST_COMMAND = 'ping 8.8.8.8'
-else:
-    DEFAULT_TEST_COMMAND = 'ping 8.8.8.8 -c 5'
+DEFAULT_TEST_COMMAND = 'ping 8.8.8.8' if os.name == 'nt' else 'ping 8.8.8.8 -c 5'
+
