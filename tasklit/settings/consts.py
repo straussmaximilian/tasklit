@@ -2,8 +2,15 @@ import os
 
 from datetime import timedelta
 
+#Home dir
+
+HOME_DIR = os.path.join(os.path.expanduser ('~'),'.tasklit')
+
+if not os.path.isdir(HOME_DIR):
+    os.mkdir(HOME_DIR)
+
 # DB Path
-APP_ENGINE_PATH = "sqlite:///app/process_data.db"
+APP_ENGINE_PATH = f"sqlite:///{HOME_DIR}/process_data.db"
 
 # Formats
 FORMAT = {
@@ -37,7 +44,7 @@ WEEK_DAYS = {
 }
 
 # Log directories
-BASE_LOG_DIR = "./app/logs"
+BASE_LOG_DIR = os.path.join(HOME_DIR, "logs")
 DEFAULT_LOG_DIR_OUT = f"{BASE_LOG_DIR}/stdout.txt"
 
 if os.name == 'nt':

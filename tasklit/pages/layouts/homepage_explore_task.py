@@ -2,10 +2,8 @@ import os
 import sys
 import streamlit as st
 
-sys.path.append((os.path.dirname(os.path.dirname(__file__))))
-
-import settings.consts as settings
-import src.utils.helpers as helper_functions
+import tasklit.settings.consts as settings
+import tasklit.src.utils.helpers as helper_functions
 
 
 def layout_homepage_explore_task(process_df) -> None:

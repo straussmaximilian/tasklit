@@ -8,7 +8,7 @@ from unittest.mock import (
 
 import pandas as pd
 
-from app.pages.layouts.homepage_explore_task import layout_homepage_explore_task
+from tasklit.pages.layouts.homepage_explore_task import layout_homepage_explore_task
 
 
 class HomepageExploreTaskTestCase(unittest.TestCase):
@@ -37,16 +37,16 @@ class HomepageExploreTaskTestCase(unittest.TestCase):
             }
         )
 
-    @patch('app.pages.layouts.homepage_explore_task.helper_functions.refresh_app')
-    @patch('app.pages.layouts.homepage_explore_task.helper_functions.st.success')
-    @patch('app.pages.layouts.homepage_explore_task.helper_functions.terminate_process')
-    @patch('app.pages.layouts.homepage_explore_task.st.button')
-    @patch('app.pages.layouts.homepage_explore_task.st.checkbox')
-    @patch('app.pages.layouts.homepage_explore_task.helper_functions.display_process_log_file')
-    @patch('app.pages.layouts.homepage_explore_task.st.code')
-    @patch('app.pages.layouts.homepage_explore_task.st.write')
-    @patch('app.pages.layouts.homepage_explore_task.st.selectbox')
-    @patch('app.pages.layouts.homepage_explore_task.st.expander')
+    @patch('tasklit.pages.layouts.homepage_explore_task.helper_functions.refresh_app')
+    @patch('tasklit.pages.layouts.homepage_explore_task.helper_functions.st.success')
+    @patch('tasklit.pages.layouts.homepage_explore_task.helper_functions.terminate_process')
+    @patch('tasklit.pages.layouts.homepage_explore_task.st.button')
+    @patch('tasklit.pages.layouts.homepage_explore_task.st.checkbox')
+    @patch('tasklit.pages.layouts.homepage_explore_task.helper_functions.display_process_log_file')
+    @patch('tasklit.pages.layouts.homepage_explore_task.st.code')
+    @patch('tasklit.pages.layouts.homepage_explore_task.st.write')
+    @patch('tasklit.pages.layouts.homepage_explore_task.st.selectbox')
+    @patch('tasklit.pages.layouts.homepage_explore_task.st.expander')
     def test_app_terminate_process_job(self,
                                        mock_st_expander: MagicMock,
                                        mock_st_selectbox: MagicMock,
