@@ -14,13 +14,15 @@ Too lazy to write cronjobs? Working on a headless system and want to have a GUI?
 ### Get started
 
 * create an environment `conda create --name tasklit python=3.8`
-* install with `pip install .` or `pip install -e .` for the editable version
+* install with `pip install tasklit`
 * run with `tasklit`
 * visit the website (default is `http://localhost:8501` or network ip)
 * Submit a new task. Example to run a test script on your desktop on a Mac system: `python \Users\username\Desktop\myscript.py`
 
-To install with the development requirements install:
-* install `pip install .[develop]`
+For local development:
+* Clone the repository locally: `git clone https://github.com/straussmaximilian/tasklit.git`
+* install with `pip install .` or `pip install -e .` for the editable version
+* for pinned requirments install the development-requirements: `pip install .[develop]`
 
 ## Limitations
 * Only task execution, no logic based on return values
