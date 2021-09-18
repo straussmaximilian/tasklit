@@ -28,6 +28,9 @@ To install with the development requirements install:
 ## Planned
 * Notifications (Email, Slack, Teams)
 
+## Acknowledgements
+The PyPi workflow and installation routine is largely copied form the [AlphaTims](https://github.com/MannLabs/alphatims)- repository.
+
 ## Tests
 * Run tests via
   ```coverage run -m unittest discover tests```
