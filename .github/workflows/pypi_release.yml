@@ -57,5 +57,5 @@ jobs:
       - name: Test pip installation from PyPi
         shell: bash -l {0}
         run: |
-          cd release/pypi
+          cd distribution/pypi
           . ./install_pypi_wheel.sh
