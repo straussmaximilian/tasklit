@@ -5,9 +5,6 @@ import pandas as pd
 from sqlalchemy import create_engine
 from sqlalchemy.exc import OperationalError
 
-from tasklit.settings.consts import PROCESS_DF_FORMAT
-from tasklit.src.classes.dataframes import app_dataframes
-
 
 class DatabaseHandler(ABC):
     """
@@ -63,27 +60,15 @@ class SQLDatabaseHandler(DatabaseHandler):
     """
 
     def __init__(self, sql_engine_uri: str):
-        self.application_dataframes = app_dataframes
         self._db_name = "process.db"
         self._sql_engine = create_engine(sql_engine_uri, echo=False)
         self.process_table_name = 'processes'
         self.stats_table_name = 'process_stats'
-        self._create_empty_tables_on_init()
-
-    def _create_empty_tables_on_init(self):
-        for table_name in (self.process_table_name, self.stats_table_name):
-            try:
-                self.load_dataframe(table_name)
-            except (OperationalError, ValueError):
-                self.save_dataframe(
-                    self.application_dataframes.process_df,
-                    table_name
-                )
 
     def save_dataframe(self, df: pd.DataFrame, table_name: str,
                        if_exists: str = "append") -> None:
         """
-        Save a dataframe with process related information to an sql file file.
+        Save a dataframe with process related information to an sql file.
 
         Args:
             df: process information df.
@@ -105,9 +90,9 @@ class SQLDatabaseHandler(DatabaseHandler):
 
     def load_dataframe(self, table_name: str) -> pd.DataFrame:
         """
-        Load
+        Load a dataframe with process related information from an sql file.
+
+        Args:
+            table_name: name of the database table to use.
         """
-        try:
-            return pd.read_sql_table(table_name, con=self._sql_engine)
-        except ValueError:
-            return pd.DataFrame(PROCESS_DF_FORMAT)
+        return pd.read_sql_table(table_name, con=self._sql_engine)
