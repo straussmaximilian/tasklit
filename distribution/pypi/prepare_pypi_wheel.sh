@@ -1,4 +1,4 @@
-cd .. / ..
+cd ../..
 
 conda create -n tasklit_pypi_wheel python=3.8
 conda activate tasklit_pypi_wheel
