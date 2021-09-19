@@ -23,6 +23,7 @@ from streamlit.delta_generator import DeltaGenerator
 
 import tasklit.settings.consts as settings
 from tasklit.src.classes.usage_observer import UsageObserver
+from tasklit.src.classes import app_sqlite_handler
 
 
 def app_exception_handler(func: Callable) -> Callable:
@@ -389,7 +390,7 @@ def write_job_execution_log(job_name: str, command: str, now: datetime, msg: str
             raise exc
 
 
-@UsageStatTracker
+@UsageObserver
 def execute_job(command: str, log_filepath: str,
                 job_name: str, now: datetime) -> None:
     """
@@ -561,8 +562,7 @@ def start_scheduler_process(command: str, job_name: str, start: datetime,
 
 def submit_job(command: str, job_name: str, start: datetime,
                interval_duration: timedelta, weekdays: Optional[List[str]],
-               execution_frequency: str, execution_type: str,
-               task_id: int, sql_engine: engine) -> None:
+               execution_frequency: str, execution_type: str, task_id: int) -> None:
     """
     Run a process job and save related process information to an SQL alchemy file.
 
@@ -575,12 +575,11 @@ def submit_job(command: str, job_name: str, start: datetime,
         execution_frequency: frequency of execution: "Interval" / "Daily"
         execution_type: type of execution schedule: is execution "Scheduled" or not.
         task_id: task ID.
-        sql_engine: sql engine to use for saving DF information to sql.
     """
     started_process_id = start_scheduler_process(command, job_name, start, interval_duration,
                                                  weekdays, execution_frequency, execution_type)
     process_df = create_process_info_dataframe(command, job_name, started_process_id, task_id)
-    save_df_to_sql(process_df, sql_engine)
+    app_sqlite_handler.save_dataframe(process_df, app_sqlite_handler.process_table_name)
 
 
 def read_log(filename: str) -> List[str]:
@@ -629,10 +628,12 @@ def check_last_process_info_update(job_name: str) -> Optional[datetime]:
     Returns:
         datetime: last modified timestamp.
     """
-    filename = f"{settings.BASE_LOG_DIR}/{job_name}.txt"
-
     try:
-        return datetime.fromtimestamp(os.path.getmtime(filename))
+        return datetime.fromtimestamp(
+            os.path.getmtime(
+                f"{settings.BASE_LOG_DIR}/{job_name}.txt"
+            )
+        )
     except OSError:
         return None
 
@@ -659,8 +660,8 @@ def get_process_df(sql_engine: engine) -> pd.DataFrame:
     """
     try:
         df = pd.read_sql_table("processes", con=sql_engine)
-    except ValueError:
-        df = pd.DataFrame(settings.PROCESS_DF_FORMAT)
+    # except ValueError:
+    #     df = pd.DataFrame(settings.PROCESS_DF_FORMAT)
     except OperationalError as exc:
         raise exc
 

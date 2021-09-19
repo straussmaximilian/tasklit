@@ -9,9 +9,9 @@ HOME_DIR = os.path.join(os.path.expanduser('~'), '.tasklit')
 if not os.path.isdir(HOME_DIR):
     os.mkdir(HOME_DIR)
 
-# DB Path
+# Database parameters
 BASE_DATA_DIR = os.path.join(HOME_DIR, "data")
-APP_ENGINE_PATH = f"sqlite:///{BASE_DATA_DIR}/process.db"
+SQLITE_APP_ENGINE = f"sqlite:///{BASE_DATA_DIR}/process.db"
 
 # Formats
 PROCESS_DF_FORMAT = {
@@ -22,6 +22,12 @@ PROCESS_DF_FORMAT = {
     "command": [],
     "last update": [],
     "running": [],
+}
+STATS_DF_FORMAT = {
+    "job_name": [],
+    "command": [],
+    "avg. duration": [],
+    "executions": []
 }
 DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
 

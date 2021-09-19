@@ -1,5 +1,3 @@
-import os
-import sys
 import streamlit as st
 
 import tasklit.settings.consts as settings
@@ -7,17 +5,15 @@ import tasklit.src.utils.helpers as helper_functions
 from tasklit.src.utils.job_names import get_job_name
 
 
-def layout_homepage_define_new_task(process_df, sql_engine) -> None:
+def layout_homepage_define_new_task(process_df) -> None:
     """
     Render and process homepage UI layout for defining a new task.
 
     Args:
         process_df: df with current process information.
-        sql_engine: sql engine for saving df into sql.
     """
     with st.expander("New task"):
         job_name = st.text_input("Job name", get_job_name())
-
 
         command = st.text_input("Enter command", settings.DEFAULT_TEST_COMMAND)
 
@@ -65,7 +61,6 @@ def layout_homepage_define_new_task(process_df, sql_engine) -> None:
                 frequency,
                 execution,
                 new_task_id,
-                sql_engine,
             )
 
             st.success(

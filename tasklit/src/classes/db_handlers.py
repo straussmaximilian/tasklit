@@ -1,10 +1,12 @@
+from abc import ABC, abstractmethod
+
 import pandas as pd
 
-from abc import ABC, abstractmethod
 from sqlalchemy import create_engine
 from sqlalchemy.exc import OperationalError
 
-from tasklit.settings.consts import BASE_DATA_DIR
+from tasklit.settings.consts import PROCESS_DF_FORMAT
+from tasklit.src.classes.dataframes import app_dataframes
 
 
 class DatabaseHandler(ABC):
@@ -34,9 +36,10 @@ class DatabaseHandler(ABC):
         pass
 
 
-class SQLiteDatabaseHandler(DatabaseHandler):
+class SQLDatabaseHandler(DatabaseHandler):
     """
-    Class responsible for dataframe conversion to/from SQLite.
+    Class responsible for dataframe conversion to/from SQL.
+    Type of the SQL database is defined by the sqlalchemy engine URI.
 
     Parameters:
     ___________
@@ -58,21 +61,34 @@ class SQLiteDatabaseHandler(DatabaseHandler):
     load_dataframe()
         implementation of the abstract interface method: load a dataframe from an SQLite database file.
     """
-    def __init__(self):
+
+    def __init__(self, sql_engine_uri: str):
+        self.application_dataframes = app_dataframes
         self._db_name = "process.db"
-        self._db_type = "sqlite"
-        self._engine_path = f"{self._db_type}:///{BASE_DATA_DIR}/{self._db_name}"
-        self._sql_engine = create_engine(self._engine_path, echo=False)
+        self._sql_engine = create_engine(sql_engine_uri, echo=False)
         self.process_table_name = 'processes'
         self.stats_table_name = 'process_stats'
+        self._create_empty_tables_on_init()
 
-    def save_dataframe(self, df: pd.DataFrame, table_name: str) -> None:
+    def _create_empty_tables_on_init(self):
+        for table_name in (self.process_table_name, self.stats_table_name):
+            try:
+                self.load_dataframe(table_name)
+            except (OperationalError, ValueError):
+                self.save_dataframe(
+                    self.application_dataframes.process_df,
+                    table_name
+                )
+
+    def save_dataframe(self, df: pd.DataFrame, table_name: str,
+                       if_exists: str = "append") -> None:
         """
-        Save dataframe with process information to a local sql alchemy DB file.
+        Save a dataframe with process related information to an sql file file.
 
         Args:
             df: process information df.
             table_name: name of the SQL table to write to.
+            if_exists: string indicating what to do if table already exists, e.g. append, replace.
 
         Raises:
             OperationalError: if any sqlalchemy errors are thrown.
@@ -81,11 +97,17 @@ class SQLiteDatabaseHandler(DatabaseHandler):
             df.to_sql(
                 table_name,
                 con=self._sql_engine,
-                if_exists="append",
+                if_exists=if_exists,
                 index=False
             )
         except OperationalError as exc:
             raise exc
 
     def load_dataframe(self, table_name: str) -> pd.DataFrame:
-        return pd.read_sql_table(table_name, con=self._sql_engine)
+        """
+        Load
+        """
+        try:
+            return pd.read_sql_table(table_name, con=self._sql_engine)
+        except ValueError:
+            return pd.DataFrame(PROCESS_DF_FORMAT)
