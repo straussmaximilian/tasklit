@@ -1,17 +1,17 @@
 """
-Define classes responsible for gathering and storing app usage statistics:
-    -> UsageObserver decorator to track function execution
-    -> StatTracker to perform calculations and hold data
+Define classes responsible for gathering and storing app usage statistics.
 """
-
 
 from collections import namedtuple
 from inspect import signature
 from time import time
 
+from tasklit.src.classes.db_handlers import DatabaseHandler
+
 
 class UsageObserver:
-    def __init__(self, func):
+    def __init__(self, func, db_handler: DatabaseHandler):
+        self._db_handler = db_handler
         self._job_name = 'job_name'
         self._command = 'command'
         self._function_to_track = func

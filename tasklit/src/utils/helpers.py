@@ -23,7 +23,7 @@ from streamlit.delta_generator import DeltaGenerator
 
 import tasklit.settings.consts as settings
 from tasklit.src.classes.usage_observer import UsageObserver
-from tasklit.src.classes import app_sqlite_handler
+from tasklit.src.classes import app_db_handler
 
 
 def app_exception_handler(func: Callable) -> Callable:
@@ -390,7 +390,7 @@ def write_job_execution_log(job_name: str, command: str, now: datetime, msg: str
             raise exc
 
 
-@UsageObserver
+@UsageObserver(db_handler=app_db_handler)
 def execute_job(command: str, log_filepath: str,
                 job_name: str, now: datetime) -> None:
     """
@@ -579,7 +579,7 @@ def submit_job(command: str, job_name: str, start: datetime,
     started_process_id = start_scheduler_process(command, job_name, start, interval_duration,
                                                  weekdays, execution_frequency, execution_type)
     process_df = create_process_info_dataframe(command, job_name, started_process_id, task_id)
-    app_sqlite_handler.save_dataframe(process_df, app_sqlite_handler.process_table_name)
+    app_db_handler.save_dataframe(process_df, app_db_handler.process_table_name)
 
 
 def read_log(filename: str) -> List[str]:

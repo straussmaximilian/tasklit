@@ -1,3 +1,9 @@
+"""
+Classes responsible for handling data storage. Implement dependency inversion principle
+by inheriting from an abstract class, e.g. in the future we could have multiple database handlers,
+working with different types of storage, e.g. sql, feather, hdf, etc.
+"""
+
 from abc import ABC, abstractmethod
 
 import pandas as pd
@@ -10,10 +16,6 @@ class DatabaseHandler(ABC):
     """
     An abstract class to define key methods for loading and storing
     dataframe objects that every database handler must have.
-
-    Implements dependency inversion principle, e.g.
-    in the future we could have multiple database handlers, working with
-    different types of storage, e.g. sql, feather, hdf, etc.
     """
 
     @abstractmethod
