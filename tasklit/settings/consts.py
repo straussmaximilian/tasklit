@@ -14,7 +14,7 @@ BASE_DATA_DIR = os.path.join(HOME_DIR, "data")
 APP_ENGINE_PATH = f"sqlite:///{BASE_DATA_DIR}/process.db"
 
 # Formats
-FORMAT = {
+PROCESS_DF_FORMAT = {
     "task_id": [],
     "created": [],
     "process id": [],

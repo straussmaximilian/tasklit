@@ -22,7 +22,7 @@ from sqlalchemy.exc import OperationalError
 from streamlit.delta_generator import DeltaGenerator
 
 import tasklit.settings.consts as settings
-from tasklit.src.classes.stats import UsageTracker
+from tasklit.src.classes.usage_observer import UsageObserver
 
 
 def app_exception_handler(func: Callable) -> Callable:
@@ -389,7 +389,7 @@ def write_job_execution_log(job_name: str, command: str, now: datetime, msg: str
             raise exc
 
 
-@UsageTracker
+@UsageStatTracker
 def execute_job(command: str, log_filepath: str,
                 job_name: str, now: datetime) -> None:
     """
@@ -652,8 +652,6 @@ def update_process_status_info(df: pd.DataFrame) -> None:
 def get_process_df(sql_engine: engine) -> pd.DataFrame:
     """
     Check for and initialize process info dataframe has already been created.
-    If process dataframe already exists, filter out dead and 'zombie' processes to only
-    show accurate process information.
 
     Returns:
         either an existing process dataframe or an empty one,
@@ -662,7 +660,7 @@ def get_process_df(sql_engine: engine) -> pd.DataFrame:
     try:
         df = pd.read_sql_table("processes", con=sql_engine)
     except ValueError:
-        df = pd.DataFrame(settings.FORMAT)
+        df = pd.DataFrame(settings.PROCESS_DF_FORMAT)
     except OperationalError as exc:
         raise exc
 

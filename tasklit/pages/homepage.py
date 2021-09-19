@@ -1,5 +1,3 @@
-import os
-import sys
 import socket
 
 import streamlit as st

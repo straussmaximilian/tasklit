@@ -2,6 +2,7 @@ import tasklit
 
 from setuptools import setup, find_packages
 
+
 with open("requirements.txt") as requirements_file:
     requirements = [_ for _ in requirements_file]
 
