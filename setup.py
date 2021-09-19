@@ -14,7 +14,7 @@ with open("README.md", "r") as readme_file:
 
 setup(
     name='tasklit',
-    version='0.0.2',
+    version='0.0.3',
     url='https://github.com/straussmaximilian/tasklit',
     long_description=LONG_DESCRIPTION,
     long_description_content_type="text/markdown",
