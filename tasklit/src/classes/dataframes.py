@@ -11,4 +11,3 @@ class ApplicationDataframes:
     stats_df = pd.DataFrame(STATS_DF_FORMAT)
 
 
-app_dataframes = ApplicationDataframes()

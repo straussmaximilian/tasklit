@@ -1,20 +1,21 @@
 import os
 
+from dataclasses import dataclass
 from datetime import timedelta
+from typing import Dict
 
 
-# Home dir
-HOME_DIR = os.path.join(os.path.expanduser('~'), '.tasklit')
+HOME_DIR: str = os.path.join(os.path.expanduser('~'), '.tasklit')
 
 if not os.path.isdir(HOME_DIR):
     os.mkdir(HOME_DIR)
 
 # Database parameters
-BASE_DATA_DIR = os.path.join(HOME_DIR, "data")
-SQLITE_APP_ENGINE = f"sqlite:///{BASE_DATA_DIR}/process.db"
+BASE_DATA_DIR: str = os.path.join(HOME_DIR, "data")
+SQLITE_APP_ENGINE: str = f"sqlite:///{BASE_DATA_DIR}/process.db"
 
 # Formats
-PROCESS_DF_FORMAT = {
+PROCESS_DF_FORMAT: Dict[str, list] = {
     "task_id": [],
     "created": [],
     "process id": [],
@@ -23,24 +24,25 @@ PROCESS_DF_FORMAT = {
     "last update": [],
     "running": [],
 }
-STATS_DF_FORMAT = {
+STATS_DF_FORMAT: Dict[str, list] = {
     "job_name": [],
     "command": [],
     "avg. duration": [],
     "executions": []
 }
-DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
+DATE_FORMAT: str = "%Y-%m-%d %H:%M:%S"
 
 # Execution frequencies
-IMMEDIATE_FREQUENCY = "Once"
-INTERVAL_FREQUENCY = "Interval"
-DAILY_FREQUENCY = "Daily"
+IMMEDIATE_FREQUENCY: str = "Once"
+INTERVAL_FREQUENCY: str = "Interval"
+DAILY_FREQUENCY: str = "Daily"
 
 # Datetime values and translation settings
-TIME_VALUES = {"Minutes": 59, "Hours": 59, "Days": 364, "Weeks": 51}
-DATE_TRANSLATION = {"Days": timedelta(days=1), "Hours": timedelta(hours=1), "Minutes": timedelta(minutes=1),
-                    "Weeks": timedelta(weeks=1)}
-WEEK_DAYS = {
+TIME_VALUES: Dict[str, int] = {"Minutes": 59, "Hours": 59, "Days": 364, "Weeks": 51}
+DATE_TRANSLATION: Dict[str, timedelta] = {"Days": timedelta(days=1), "Hours": timedelta(hours=1),
+                                          "Minutes": timedelta(minutes=1),
+                                          "Weeks": timedelta(weeks=1)}
+WEEK_DAYS: Dict[int, str] = {
     0: "Mon",
     1: "Tue",
     2: "Wed",
@@ -51,8 +53,25 @@ WEEK_DAYS = {
 }
 
 # Log directories
-BASE_LOG_DIR = os.path.join(HOME_DIR, "logs")
-DEFAULT_LOG_DIR_OUT = f"{BASE_LOG_DIR}/stdout.txt"
+BASE_LOG_DIR: str = os.path.join(HOME_DIR, "logs")
+DEFAULT_LOG_DIR_OUT: str = f"{BASE_LOG_DIR}/stdout.txt"
 
-DEFAULT_TEST_COMMAND = 'ping 8.8.8.8' if os.name == 'nt' else 'ping 8.8.8.8 -c 5'
+DEFAULT_TEST_COMMAND: str = 'ping 8.8.8.8' if os.name == 'nt' else 'ping 8.8.8.8 -c 5'
 
+
+@dataclass(frozen=True)
+class DatabaseTables:
+    """Standardize information about application database tables:
+        -> table name
+        -> corresponding columns
+    """
+    PROCESS_TABLE: str = "processes"
+    STATS_TABLE: str = "process_stats"
+
+    METADATA = {
+        PROCESS_TABLE: PROCESS_DF_FORMAT,
+        STATS_TABLE: STATS_DF_FORMAT
+    }
+
+
+DATABASE_TABLES = DatabaseTables()

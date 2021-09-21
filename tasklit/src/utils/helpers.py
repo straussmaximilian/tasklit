@@ -390,7 +390,7 @@ def write_job_execution_log(job_name: str, command: str, now: datetime, msg: str
             raise exc
 
 
-@UsageObserver(db_handler=app_db_handler)
+@UsageObserver
 def execute_job(command: str, log_filepath: str,
                 job_name: str, now: datetime) -> None:
     """

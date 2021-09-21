@@ -6,12 +6,13 @@ from collections import namedtuple
 from inspect import signature
 from time import time
 
+from tasklit.src.classes import app_db_handler
 from tasklit.src.classes.db_handlers import DatabaseHandler
 
 
 class UsageObserver:
-    def __init__(self, func, db_handler: DatabaseHandler):
-        self._db_handler = db_handler
+    def __init__(self, func):
+        self._db_handler: DatabaseHandler = app_db_handler
         self._job_name = 'job_name'
         self._command = 'command'
         self._function_to_track = func
@@ -22,7 +23,6 @@ class UsageObserver:
         self._function_argument_order = self._get_argument_position()
 
         if not self._function_argument_order:
-            # We couldn't match parameters to track in the function signature
             raise ValueError
 
         self.JobInfo = namedtuple("Job", "name command duration executions")
@@ -35,13 +35,8 @@ class UsageObserver:
             raise exc
 
     def _get_argument_position(self):
-        result = {}
-
-        for idx, param in enumerate(self._signature.parameters.keys()):
-            if param in self._statistics_to_collect:
-                result[param] = idx
-
-        return result
+        return {param: idx for idx, param in enumerate(self._signature.parameters.keys()) if
+                param in self._statistics_to_collect}
 
     def _get_argument(self, arg_name, args):
         return args[self._function_argument_order[arg_name]]

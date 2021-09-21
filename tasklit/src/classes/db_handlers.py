@@ -5,10 +5,11 @@ working with different types of storage, e.g. sql, feather, hdf, etc.
 """
 
 from abc import ABC, abstractmethod
+from typing import Dict
 
 import pandas as pd
 
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, inspect
 from sqlalchemy.exc import OperationalError
 
 
@@ -61,11 +62,22 @@ class SQLDatabaseHandler(DatabaseHandler):
         implementation of the abstract interface method: load a dataframe from an SQLite database file.
     """
 
-    def __init__(self, sql_engine_uri: str):
+    def __init__(self, sql_engine_uri: str, tables: Dict[str, pd.DataFrame]):
         self._db_name = "process.db"
+        self._tables = tables
         self._sql_engine = create_engine(sql_engine_uri, echo=False)
         self.process_table_name = 'processes'
         self.stats_table_name = 'process_stats'
+
+    @staticmethod
+    def _table_exists(engine, table_name) -> bool:
+        ins = inspect(engine)
+        return ins.dialect.has_table(engine.connect(), table_name)
+
+    def create_tables_on_init(self):
+        for table_name, table_format in self._tables.items():
+            if not self._table_exists(self._sql_engine, self.process_table_name):
+                self.save_dataframe(pd.DataFrame(table_format), table_name)
 
     def save_dataframe(self, df: pd.DataFrame, table_name: str,
                        if_exists: str = "append") -> None:
@@ -97,4 +109,7 @@ class SQLDatabaseHandler(DatabaseHandler):
         Args:
             table_name: name of the database table to use.
         """
-        return pd.read_sql_table(table_name, con=self._sql_engine)
+        try:
+            return pd.read_sql_table(table_name, con=self._sql_engine)
+        except ValueError:
+            pass
