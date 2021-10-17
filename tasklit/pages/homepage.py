@@ -20,8 +20,11 @@ def homepage() -> None:
 
     # Prepare and display process dataframe
     process_df = app_db_handler.load_dataframe(app_db_handler.process_table_name)
+    print(process_df, 1)
     helper_functions.update_process_status_info(process_df)
+    print(process_df, 2)
     helper_functions.update_df_process_last_update_info(process_df)
+    print(process_df, 3)
     st.table(process_df)
 
     # In case process df has any processes that are no longer running (but still alive)

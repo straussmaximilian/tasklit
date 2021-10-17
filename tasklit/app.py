@@ -1,7 +1,6 @@
 import tasklit.settings.consts as settings
 import tasklit.src.utils.helpers as helper_functions
 from tasklit.src.classes import app_db_handler
-
 from tasklit.pages.homepage import homepage
 
 

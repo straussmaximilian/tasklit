@@ -5,12 +5,22 @@ working with different types of storage, e.g. sql, feather, hdf, etc.
 """
 
 from abc import ABC, abstractmethod
-from typing import Dict
+from typing import (
+    Dict,
+    Optional,
+    Union
+)
 
 import pandas as pd
 
 from sqlalchemy import create_engine, inspect
 from sqlalchemy.exc import OperationalError
+from sqlalchemy.types import (
+    Boolean,
+    DateTime,
+    Integer,
+    String
+)
 
 
 class DatabaseHandler(ABC):
@@ -66,6 +76,15 @@ class SQLDatabaseHandler(DatabaseHandler):
         self._db_name = "process.db"
         self._tables = tables
         self._sql_engine = create_engine(sql_engine_uri, echo=False)
+        self._dtypes = {
+            "task_id": Integer,
+            "process id": Integer,
+            "command": String,
+            "job name": String,
+            "created": DateTime,
+            "last update": DateTime,
+            "running": Boolean
+        }
         self.process_table_name = 'processes'
         self.stats_table_name = 'process_stats'
 
@@ -77,10 +96,11 @@ class SQLDatabaseHandler(DatabaseHandler):
     def create_tables_on_init(self):
         for table_name, table_format in self._tables.items():
             if not self._table_exists(self._sql_engine, self.process_table_name):
-                self.save_dataframe(pd.DataFrame(table_format), table_name)
+                self.save_dataframe(pd.DataFrame(table_format), table_name, col_data_types=self._dtypes)
 
     def save_dataframe(self, df: pd.DataFrame, table_name: str,
-                       if_exists: str = "append") -> None:
+                       if_exists: str = "append",
+                       col_data_types: Dict[str, Optional[Union[Boolean, DateTime, Integer, String]]] = None) -> None:
         """
         Save a dataframe with process related information to an sql file.
 
@@ -88,6 +108,7 @@ class SQLDatabaseHandler(DatabaseHandler):
             df: process information df.
             table_name: name of the SQL table to write to.
             if_exists: string indicating what to do if table already exists, e.g. append, replace.
+            col_data_types: data types to use for columns when creating the SQL schema.
 
         Raises:
             OperationalError: if any sqlalchemy errors are thrown.
@@ -97,7 +118,8 @@ class SQLDatabaseHandler(DatabaseHandler):
                 table_name,
                 con=self._sql_engine,
                 if_exists=if_exists,
-                index=False
+                index=False,
+                dtype=col_data_types
             )
         except OperationalError as exc:
             raise exc
@@ -109,7 +131,4 @@ class SQLDatabaseHandler(DatabaseHandler):
         Args:
             table_name: name of the database table to use.
         """
-        try:
-            return pd.read_sql_table(table_name, con=self._sql_engine)
-        except ValueError:
-            pass
+        return pd.read_sql_table(table_name, con=self._sql_engine)
