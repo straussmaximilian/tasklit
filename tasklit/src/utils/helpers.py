@@ -1,37 +1,31 @@
-import os
-import traceback
-import time
+"""Application utility functions."""
 
+import os
+import time
+import traceback
 from datetime import datetime, timedelta
 from multiprocessing import Process
 from pathlib import Path
 from subprocess import Popen
-from typing import (
-    Callable,
-    List,
-    Optional,
-    Tuple
-)
+from typing import Callable, List, Optional, Tuple
 
 import pandas as pd
 import psutil
 import streamlit as st
-
+import tasklit.settings.consts as settings
 from sqlalchemy import engine
 from sqlalchemy.exc import OperationalError
 from streamlit.delta_generator import DeltaGenerator
-
-import tasklit.settings.consts as settings
-from tasklit.src.classes.usage_observer import UsageObserver
 from tasklit.src.classes import app_db_handler
+from tasklit.src.classes.usage_observer import UsageObserver
 
 
 def app_exception_handler(func: Callable) -> Callable:
-    """
-    Decorator function to streamline error handling within the app.
-    The idea is to have a wrapper around the app that is responsible for displaying
-    error messages. Individual helper methods only raise errors that 'bubble' up to this layer
-    and get processed.
+    """Streamline error handling within the app.
+
+    The idea is to have a wrapper around the app that is responsible for
+    displaying error messages. Individual helper methods only raise errors that
+    'bubble' up to this layer and get processed.
 
     Args:
         func: function that returns an application view, e.g. app homepage.
@@ -156,9 +150,9 @@ def test_command_run(command: str) -> None:
             break
 
 
-def get_time_interval_info(unit_col: DeltaGenerator,
-                           slider_col: DeltaGenerator
-                           ) -> Tuple[Optional[str], Optional[int]]:
+def get_time_interval_info(
+    unit_col: DeltaGenerator, slider_col: DeltaGenerator
+) -> Tuple[Optional[str], Optional[int]]:
     """
     Get execution frequency information from UI inputs.
 
@@ -197,10 +191,9 @@ def select_weekdays(unit_col: DeltaGenerator) -> Optional[List[str]]:
     )
 
 
-def get_execution_interval_information(execution_frequency: str,
-                                       unit_col: DeltaGenerator,
-                                       slider_col: DeltaGenerator
-                                       ) -> Tuple[Optional[str], Optional[int], Optional[List[str]]]:
+def get_execution_interval_information(
+    execution_frequency: str, unit_col: DeltaGenerator, slider_col: DeltaGenerator
+) -> Tuple[Optional[str], Optional[int], Optional[List[str]]]:
     """
     Get command execution interval information, including time interval (e.g. hours, weeks, etc.),
     related quantity and execution weekdays.
@@ -226,8 +219,9 @@ def get_execution_interval_information(execution_frequency: str,
     return time_unit, time_unit_quantity, weekdays
 
 
-def calculate_execution_start(date_input_col: DeltaGenerator,
-                              time_slider_col: DeltaGenerator) -> datetime:
+def calculate_execution_start(
+    date_input_col: DeltaGenerator, time_slider_col: DeltaGenerator
+) -> datetime:
     """
     Calculate the start datetime of command execution.
 
@@ -253,9 +247,13 @@ def calculate_execution_start(date_input_col: DeltaGenerator,
     return execution_date + time_difference
 
 
-def get_command_execution_start(execution_type: str, execution_frequency: str,
-                                weekdays: Optional[List[str]], date_col: DeltaGenerator,
-                                slider_col: DeltaGenerator) -> datetime:
+def get_command_execution_start(
+    execution_type: str,
+    execution_frequency: str,
+    weekdays: Optional[List[str]],
+    date_col: DeltaGenerator,
+    slider_col: DeltaGenerator,
+) -> datetime:
     """
     Get the start datetime of command execution.
 
@@ -304,8 +302,7 @@ def refresh_app(to_wait: int = 0) -> None:
     raise st.script_runner.RerunException(st.script_request_queue.RerunData())
 
 
-def match_weekday(now: datetime,
-                  weekdays: Optional[List[str]]) -> bool:
+def match_weekday(now: datetime, weekdays: Optional[List[str]]) -> bool:
     """
     Determine if 'today' is the day when a function must be executed.
 
@@ -344,10 +341,9 @@ def match_duration(now: datetime, start: datetime, duration: timedelta) -> bool:
     return now > (start + duration)
 
 
-def process_should_execute(now: datetime,
-                           start: datetime,
-                           duration: timedelta,
-                           weekdays: Optional[List[str]]) -> bool:
+def process_should_execute(
+    now: datetime, start: datetime, duration: timedelta, weekdays: Optional[List[str]]
+) -> bool:
     """
     Determine whether the process should execute or not:
         -> is it the correct day of the week?
@@ -365,7 +361,9 @@ def process_should_execute(now: datetime,
     return match_weekday(now, weekdays) and match_duration(now, start, duration)
 
 
-def write_job_execution_log(job_name: str, command: str, now: datetime, msg: str) -> None:
+def write_job_execution_log(
+    job_name: str, command: str, now: datetime, msg: str
+) -> None:
     """
     Save job execution information to a log file.
 
@@ -391,8 +389,7 @@ def write_job_execution_log(job_name: str, command: str, now: datetime, msg: str
 
 
 @UsageObserver
-def execute_job(command: str, log_filepath: str,
-                job_name: str, now: datetime) -> None:
+def execute_job(command: str, log_filepath: str, job_name: str, now: datetime) -> None:
     """
     Interface for running a job:
         -> launch a process
@@ -410,8 +407,9 @@ def execute_job(command: str, log_filepath: str,
     write_job_execution_log(job_name, command, now, "Executed")
 
 
-def get_interval_duration(time_unit: str, time_unit_quantity: Optional[int],
-                          weekdays: Optional[List[str]]) -> timedelta:
+def get_interval_duration(
+    time_unit: str, time_unit_quantity: Optional[int], weekdays: Optional[List[str]]
+) -> timedelta:
     """
     Get the waiting interval to wait for until the next job execution.
 
@@ -424,15 +422,24 @@ def get_interval_duration(time_unit: str, time_unit_quantity: Optional[int],
         timedelta: time interval to wait before next schedule.
     """
     try:
-        return timedelta(days=1) if weekdays or not time_unit else \
-            settings.DATE_TRANSLATION[time_unit] * time_unit_quantity
+        return (
+            timedelta(days=1)
+            if weekdays or not time_unit
+            else settings.DATE_TRANSLATION[time_unit] * time_unit_quantity
+        )
     except KeyError as exc:
         raise exc
 
 
-def schedule_process_job(command: str, job_name: str, start: datetime,
-                         interval_duration: timedelta, weekdays: Optional[List[str]],
-                         execution_frequency: str, execution_type: str) -> None:
+def schedule_process_job(
+    command: str,
+    job_name: str,
+    start: datetime,
+    interval_duration: timedelta,
+    weekdays: Optional[List[str]],
+    execution_frequency: str,
+    execution_type: str,
+) -> None:
     """
     Launch a scheduler process that spawns job execution processes if launch conditions are met.
     Checks for current date. If date criterion is met -> start the process with command execution.
@@ -466,10 +473,9 @@ def schedule_process_job(command: str, job_name: str, start: datetime,
             time.sleep(1)
 
 
-def create_process_info_dataframe(command: str,
-                                  job_name: str,
-                                  pid: int,
-                                  task_id: int) -> pd.DataFrame:
+def create_process_info_dataframe(
+    command: str, job_name: str, pid: int, task_id: int
+) -> pd.DataFrame:
     """
     Generate a dataframe with process information in the following format:
 
@@ -524,9 +530,15 @@ def save_df_to_sql(df: pd.DataFrame, sql_engine: engine) -> None:
         raise exc
 
 
-def start_scheduler_process(command: str, job_name: str, start: datetime,
-                            interval_duration: timedelta, weekdays: Optional[List[str]],
-                            execution_frequency: str, execution_type: str) -> int:
+def start_scheduler_process(
+    command: str,
+    job_name: str,
+    start: datetime,
+    interval_duration: timedelta,
+    weekdays: Optional[List[str]],
+    execution_frequency: str,
+    execution_type: str,
+) -> int:
     """
     Run a process with the selected parameters.
 
@@ -551,8 +563,8 @@ def start_scheduler_process(command: str, job_name: str, start: datetime,
             interval_duration,
             weekdays,
             execution_frequency,
-            execution_type
-        )
+            execution_type,
+        ),
     )
 
     process.start()
@@ -560,9 +572,16 @@ def start_scheduler_process(command: str, job_name: str, start: datetime,
     return process.pid
 
 
-def submit_job(command: str, job_name: str, start: datetime,
-               interval_duration: timedelta, weekdays: Optional[List[str]],
-               execution_frequency: str, execution_type: str, task_id: int) -> None:
+def submit_job(
+    command: str,
+    job_name: str,
+    start: datetime,
+    interval_duration: timedelta,
+    weekdays: Optional[List[str]],
+    execution_frequency: str,
+    execution_type: str,
+    task_id: int,
+) -> None:
     """
     Run a process job and save related process information to an SQL alchemy file.
 
@@ -576,9 +595,18 @@ def submit_job(command: str, job_name: str, start: datetime,
         execution_type: type of execution schedule: is execution "Scheduled" or not.
         task_id: task ID.
     """
-    started_process_id = start_scheduler_process(command, job_name, start, interval_duration,
-                                                 weekdays, execution_frequency, execution_type)
-    process_df = create_process_info_dataframe(command, job_name, started_process_id, task_id)
+    started_process_id = start_scheduler_process(
+        command,
+        job_name,
+        start,
+        interval_duration,
+        weekdays,
+        execution_frequency,
+        execution_type,
+    )
+    process_df = create_process_info_dataframe(
+        command, job_name, started_process_id, task_id
+    )
     app_db_handler.save_dataframe(process_df, app_db_handler.process_table_name)
 
 
@@ -630,9 +658,7 @@ def check_last_process_info_update(job_name: str) -> Optional[datetime]:
     """
     try:
         return datetime.fromtimestamp(
-            os.path.getmtime(
-                f"{settings.BASE_LOG_DIR}/{job_name}.txt"
-            )
+            os.path.getmtime(f"{settings.BASE_LOG_DIR}/{job_name}.txt")
         )
     except OSError:
         return None
@@ -647,7 +673,8 @@ def update_process_status_info(df: pd.DataFrame) -> None:
         df: df with process information.
     """
     df["running"] = df["process id"].apply(
-        lambda x: psutil.pid_exists(x) and psutil.Process(x).status() == "running")
+        lambda x: psutil.pid_exists(x) and psutil.Process(x).status() == "running"
+    )
 
 
 def get_process_df(sql_engine: engine) -> pd.DataFrame:
@@ -660,8 +687,6 @@ def get_process_df(sql_engine: engine) -> pd.DataFrame:
     """
     try:
         df = pd.read_sql_table("processes", con=sql_engine)
-    # except ValueError:
-    #     df = pd.DataFrame(settings.PROCESS_DF_FORMAT)
     except OperationalError as exc:
         raise exc
 
@@ -669,10 +694,11 @@ def get_process_df(sql_engine: engine) -> pd.DataFrame:
 
 
 def update_df_process_last_update_info(df: pd.DataFrame) -> None:
-    """
-    Iterate over processes in process df and update respective process 'last update' values.
+    """Update process 'last update' information.
 
     Args:
         df: df with process information.
     """
-    df["last update"] = df["job name"].apply(lambda x: check_last_process_info_update(x) if x else "")
+    df["last update"] = df["job name"].apply(
+        lambda x: check_last_process_info_update(x) if x else ""
+    )

@@ -1,29 +1,20 @@
-"""
-Classes responsible for handling data storage. Implement dependency inversion principle
-by inheriting from an abstract class, e.g. in the future we could have multiple database handlers,
-working with different types of storage, e.g. sql, feather, hdf, etc.
+"""Classes responsible for handling data storage.
+
+Implement dependency inversion principle by inheriting from an abstract class,
+e.g. in the future we could have multiple database handlers, working with
+different types of storage, e.g. sql, feather, hdf, etc.
 """
 
 from abc import ABC, abstractmethod
-from typing import (
-    Dict,
-    Optional,
-    Union
-)
+from typing import Dict, Optional, Union
 
 import pandas as pd
-
 from sqlalchemy import create_engine, inspect
 from sqlalchemy.exc import OperationalError
-from sqlalchemy.types import (
-    Boolean,
-    DateTime,
-    Integer,
-    String
-)
+from sqlalchemy.types import Boolean, DateTime, Integer, String
 
 
-class DatabaseHandler(ABC):
+class DataRepository(ABC):
     """
     An abstract class to define key methods for loading and storing
     dataframe objects that every database handler must have.
@@ -46,7 +37,7 @@ class DatabaseHandler(ABC):
         pass
 
 
-class SQLDatabaseHandler(DatabaseHandler):
+class SQLDataRepository(DataRepository):
     """
     Class responsible for dataframe conversion to/from SQL.
     Type of the SQL database is defined by the sqlalchemy engine URI.
@@ -83,10 +74,10 @@ class SQLDatabaseHandler(DatabaseHandler):
             "job name": String,
             "created": DateTime,
             "last update": DateTime,
-            "running": Boolean
+            "running": Boolean,
         }
-        self.process_table_name = 'processes'
-        self.stats_table_name = 'process_stats'
+        self.process_table_name = "processes"
+        self.stats_table_name = "process_stats"
 
     @staticmethod
     def _table_exists(engine, table_name) -> bool:
@@ -96,11 +87,19 @@ class SQLDatabaseHandler(DatabaseHandler):
     def create_tables_on_init(self):
         for table_name, table_format in self._tables.items():
             if not self._table_exists(self._sql_engine, self.process_table_name):
-                self.save_dataframe(pd.DataFrame(table_format), table_name, col_data_types=self._dtypes)
+                self.save_dataframe(
+                    pd.DataFrame(table_format), table_name, col_data_types=self._dtypes
+                )
 
-    def save_dataframe(self, df: pd.DataFrame, table_name: str,
-                       if_exists: str = "append",
-                       col_data_types: Dict[str, Optional[Union[Boolean, DateTime, Integer, String]]] = None) -> None:
+    def save_dataframe(
+        self,
+        df: pd.DataFrame,
+        table_name: str,
+        if_exists: str = "append",
+        col_data_types: Dict[
+            str, Optional[Union[Boolean, DateTime, Integer, String]]
+        ] = None,
+    ) -> None:
         """
         Save a dataframe with process related information to an sql file.
 
@@ -119,7 +118,7 @@ class SQLDatabaseHandler(DatabaseHandler):
                 con=self._sql_engine,
                 if_exists=if_exists,
                 index=False,
-                dtype=col_data_types
+                dtype=col_data_types,
             )
         except OperationalError as exc:
             raise exc
