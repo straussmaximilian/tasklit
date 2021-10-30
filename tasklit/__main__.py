@@ -2,6 +2,7 @@
 
 import os
 import sys
+from typing import List
 
 from streamlit import cli as stcli
 
@@ -13,7 +14,7 @@ def run() -> None:
 
     file_path = os.path.join(_this_directory, "app.py")
 
-    args = [
+    args: List[str] = [
         "streamlit",
         "run",
         file_path,
