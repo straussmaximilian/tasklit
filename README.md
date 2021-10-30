@@ -29,3 +29,17 @@ Too lazy to write cronjobs? Working on a headless system and want to have a GUI?
 * Run tests via
   ```coverage run -m unittest discover tests```
 * Check test coverage via ```coverage report -m```
+
+## Pre-commit hooks
+* The following checks will be performed on every git commit:
+  * no commits to the 'main' branch.
+  * no uploads of large files.
+  * **flake8** linting checks.
+  * **pydocstyle** docstyle checks.
+
+### Setup
+
+* Make sure the file ```.pre-commit-config.yaml``` is at the root of the repository. 
+* Make sure you have installed the 'development' requirements.
+* If run for the first time - or in case of changes to the yaml config file, run ```pre-commit install```.
+* Run ```pre-commit run --all-files``` to test results before the commit.
