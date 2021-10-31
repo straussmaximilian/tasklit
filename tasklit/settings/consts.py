@@ -1,6 +1,7 @@
 """Application settings and constants."""
 
 import os
+from dataclasses import dataclass
 from datetime import timedelta
 from typing import Dict
 
@@ -50,3 +51,12 @@ DEFAULT_LOG_DIR_OUT: str = f"{BASE_LOG_DIR}/stdout.txt"
 DEFAULT_TEST_COMMAND: str = (
     "ping 8.8.8.8" if os.name == "nt" else "ping 8.8.8.8 -c 5"
 )
+
+
+@dataclass
+class JobInformation:
+    """Store information related to a specific job."""
+
+    name: str
+    command: str
+    duration: float

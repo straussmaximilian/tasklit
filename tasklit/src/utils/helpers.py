@@ -12,12 +12,13 @@ from typing import Callable, List, Optional, Tuple
 import pandas as pd
 import psutil
 import streamlit as st
-import tasklit.settings.consts as settings
 from sqlalchemy import engine
 from sqlalchemy.exc import OperationalError
 from streamlit.delta_generator import DeltaGenerator
+
+import tasklit.settings.consts as settings
 from tasklit.src.classes import app_db_handler
-from tasklit.src.classes.usage_observer import UsageObserver
+from tasklit.src.classes.observers import JobObserver
 
 
 def app_exception_handler(func: Callable) -> Callable:
@@ -136,7 +137,9 @@ def test_command_run(command: str) -> None:
     Args:
         command: command to be executed by the process.
     """
-    test_command_process = launch_command_process(command, settings.DEFAULT_LOG_DIR_OUT)
+    test_command_process = launch_command_process(
+        command, settings.DEFAULT_LOG_DIR_OUT
+    )
     stdout = st.empty()
     stop = st.checkbox("Stop")
 
@@ -165,9 +168,13 @@ def get_time_interval_info(
     Returns:
         selected time interval and related execution frequency.
     """
-    time_unit = unit_col.selectbox("Select Unit", ("Minutes", "Hours", "Days", "Weeks"))
+    time_unit = unit_col.selectbox(
+        "Select Unit", ("Minutes", "Hours", "Days", "Weeks")
+    )
     time_unit_quantity = slider_col.slider(
-        f"Every x {time_unit}", min_value=1, max_value=settings.TIME_VALUES[time_unit]
+        f"Every x {time_unit}",
+        min_value=1,
+        max_value=settings.TIME_VALUES[time_unit],
     )
 
     return time_unit, time_unit_quantity
@@ -192,7 +199,9 @@ def select_weekdays(unit_col: DeltaGenerator) -> Optional[List[str]]:
 
 
 def get_execution_interval_information(
-    execution_frequency: str, unit_col: DeltaGenerator, slider_col: DeltaGenerator
+    execution_frequency: str,
+    unit_col: DeltaGenerator,
+    slider_col: DeltaGenerator,
 ) -> Tuple[Optional[str], Optional[int], Optional[List[str]]]:
     """
     Get command execution interval information, including time interval (e.g. hours, weeks, etc.),
@@ -211,7 +220,9 @@ def get_execution_interval_information(
     time_unit = time_unit_quantity = weekdays = None
 
     if execution_frequency == "Interval":
-        time_unit, time_unit_quantity = get_time_interval_info(unit_col, slider_col)
+        time_unit, time_unit_quantity = get_time_interval_info(
+            unit_col, slider_col
+        )
 
     if execution_frequency == "Daily":
         weekdays = select_weekdays(unit_col)
@@ -241,7 +252,9 @@ def calculate_execution_start(
         format="HH:mm",
     )
 
-    execution_date = datetime(input_date.year, input_date.month, input_date.day)
+    execution_date = datetime(
+        input_date.year, input_date.month, input_date.day
+    )
     time_difference = selected_time - datetime(2020, 1, 1, 00, 00, 00)
 
     return execution_date + time_difference
@@ -325,7 +338,9 @@ def match_weekday(now: datetime, weekdays: Optional[List[str]]) -> bool:
     return False
 
 
-def match_duration(now: datetime, start: datetime, duration: timedelta) -> bool:
+def match_duration(
+    now: datetime, start: datetime, duration: timedelta
+) -> bool:
     """
     Check whether the sum of process start date and interval timedelta is less
     than current datetime. If yes -> process must be executed.
@@ -342,7 +357,10 @@ def match_duration(now: datetime, start: datetime, duration: timedelta) -> bool:
 
 
 def process_should_execute(
-    now: datetime, start: datetime, duration: timedelta, weekdays: Optional[List[str]]
+    now: datetime,
+    start: datetime,
+    duration: timedelta,
+    weekdays: Optional[List[str]],
 ) -> bool:
     """
     Determine whether the process should execute or not:
@@ -358,7 +376,9 @@ def process_should_execute(
     Returns:
         True/False based on the result of the check.
     """
-    return match_weekday(now, weekdays) and match_duration(now, start, duration)
+    return match_weekday(now, weekdays) and match_duration(
+        now, start, duration
+    )
 
 
 def write_job_execution_log(
@@ -380,7 +400,9 @@ def write_job_execution_log(
 
     for suffix in [".txt", "_stdout.txt"]:
         try:
-            with open(f"{settings.BASE_LOG_DIR}/{job_name}{suffix}", "a") as file:
+            with open(
+                f"{settings.BASE_LOG_DIR}/{job_name}{suffix}", "a"
+            ) as file:
                 if suffix == "_stdout.txt":
                     file.write(f"\n{'=' * 70} \n")
                 file.write(f"{now_str} {msg} {command}\n")
@@ -388,8 +410,10 @@ def write_job_execution_log(
             raise exc
 
 
-@UsageObserver
-def execute_job(command: str, log_filepath: str, job_name: str, now: datetime) -> None:
+@JobObserver
+def execute_job(
+    command: str, log_filepath: str, job_name: str, now: datetime
+) -> None:
     """
     Interface for running a job:
         -> launch a process
@@ -408,7 +432,9 @@ def execute_job(command: str, log_filepath: str, job_name: str, now: datetime) -
 
 
 def get_interval_duration(
-    time_unit: str, time_unit_quantity: Optional[int], weekdays: Optional[List[str]]
+    time_unit: str,
+    time_unit_quantity: Optional[int],
+    weekdays: Optional[List[str]],
 ) -> timedelta:
     """
     Get the waiting interval to wait for until the next job execution.
@@ -607,7 +633,9 @@ def submit_job(
     process_df = create_process_info_dataframe(
         command, job_name, started_process_id, task_id
     )
-    app_db_handler.save_dataframe(process_df, app_db_handler.process_table_name)
+    app_db_handler.save_dataframe(
+        process_df, app_db_handler.process_table_name
+    )
 
 
 def read_log(filename: str) -> List[str]:
@@ -673,7 +701,8 @@ def update_process_status_info(df: pd.DataFrame) -> None:
         df: df with process information.
     """
     df["running"] = df["process id"].apply(
-        lambda x: psutil.pid_exists(x) and psutil.Process(x).status() == "running"
+        lambda x: psutil.pid_exists(x)
+        and psutil.Process(x).status() == "running"
     )
 
 
