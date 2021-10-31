@@ -19,7 +19,11 @@ repos:
   - id: pydocstyle
     additional_dependencies: [toml]
 
-- repo: https://github.com/pre-commit/mirrors-mypy
-  rev: 'v0.910-1'
-  hooks:
-    - id: mypy
+# It would make sense to include mypy as well, but some
+# of the import libraries don't have type hints. In this case, we have to
+# either set type annotations to Any or create or own stubs.
+# TODO: decide what to do here.
+#- repo: https://github.com/pre-commit/mirrors-mypy
+#  rev: 'v0.910-1'
+#  hooks:
+#    - id: mypy
