@@ -18,7 +18,7 @@ from streamlit.delta_generator import DeltaGenerator
 
 import tasklit.settings.consts as settings
 from tasklit.src.classes import app_db_handler
-from tasklit.src.classes.observers import JobObserver
+from tasklit.src.classes.observers import TaskObserver
 
 
 def app_exception_handler(func: Callable) -> Callable:
@@ -410,7 +410,7 @@ def write_job_execution_log(
             raise exc
 
 
-@JobObserver
+@TaskObserver
 def execute_job(
     command: str, log_filepath: str, job_name: str, now: datetime
 ) -> None:

@@ -3,10 +3,10 @@ from inspect import signature
 from time import time
 from typing import Any, Callable, Dict, Protocol, Set, Tuple, Type
 
-from tasklit.settings.consts import JobInformation
+from tasklit.settings.consts import TaskInformation
 from tasklit.src.classes import app_db_handler
 from tasklit.src.classes.exceptions import ObserverArgumentsMissing
-from tasklit.src.classes.stat_calculator import JobStatCalculator
+from tasklit.src.classes.stat_tracker import TaskStatisticsTracker
 
 
 class StatProcessor(Protocol):
@@ -14,7 +14,7 @@ class StatProcessor(Protocol):
         pass
 
 
-class JobObserver:
+class TaskObserver:
     """Class responsible for gathering job usage stats.
 
     Parameters:
@@ -63,7 +63,7 @@ class JobObserver:
         self._function_argument_order: Dict[
             str, int
         ] = self._get_argument_position()
-        self.job: JobInformation = JobInformation("", "", 0)
+        self.task: TaskInformation = TaskInformation("", "", 0)
         self._check_arguments_found()
 
     @staticmethod
@@ -135,7 +135,7 @@ class JobObserver:
         """
         # Grab the name of the job and the command
         # to be executed from job arguments.
-        job_name = self._get_argument(self._arg_job_name, args)
+        task_name = self._get_argument(self._arg_job_name, args)
         command = self._get_argument(self._arg_command, args)
 
         # Time job execution and update internal job state.
@@ -145,24 +145,26 @@ class JobObserver:
 
         end_time = time()
 
-        job_duration = round(end_time - start_time, 2)
+        task_duration = round(end_time - start_time, 2)
 
-        self.job.job_name = job_name
-        self.job.command = command
-        self.job.average_duration = job_duration
+        self.task.task_name = task_name
+        self.task.command = command
+        self.task.average_duration = task_duration
 
-        calc = JobStatCalculator(self.job_statistics, app_db_handler)
+        # TODO: separate into own method
+        calc = TaskStatisticsTracker(self.task_statistics, app_db_handler)
+        calc.update_current_stats()
 
         return result
 
     @property
-    def job_statistics(self) -> JobInformation:
+    def task_statistics(self) -> TaskInformation:
         """Retrieve information about the executed job."""
-        return self.job
+        return self.task
 
     # @staticmethod
     # def _update_job(
-    #     processor: StatProcessor, job_details: JobInformation
+    #     processor: StatProcessor, job_details: TaskInformation
     # ) -> None:
     #     proc = processor(job_details, app_db_handler)
     #     proc._update_current_stats()

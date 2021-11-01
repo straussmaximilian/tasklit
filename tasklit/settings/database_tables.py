@@ -69,13 +69,13 @@ class StatsTable(DatabaseTable):
 
     table_name: str = "process_stats"
     table_format: Dict[str, list] = {
-        "job_name": [],
+        "task_name": [],
         "command": [],
         "average_duration": [],
         "executions": [],
     }
     column_dtypes = {
-        "job_name": String,
+        "task_name": String,
         "command": String,
         "average_duration": Integer,
         "executions": Integer,

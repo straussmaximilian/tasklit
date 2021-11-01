@@ -1,3 +1,4 @@
+"""UI logic and elements to display task dashboard."""
 from functools import reduce
 
 import streamlit as st
@@ -12,7 +13,6 @@ def usage_dashboard() -> None:
     st.markdown("# Task Execution Statistics")
     st.text("Dive deeper into the history of your tasks.")
 
-    # Prepare and display process stats dataframe
     stats_df = app_db_handler.load_dataframe(app_db_handler.stats_table_name)
 
     total_execs_col, total_duration_col, top_command_col = st.columns(3)
@@ -59,14 +59,14 @@ def usage_dashboard() -> None:
         top_command = (
             stats_df.at[top_execs_row[0], "command"]
             if top_execs_row.any()
-            else "No jobs scheduled"
+            else "No tasks scheduled"
         )
         st.markdown(
             f"<h4 style='{H4_CSS_STYLE}'>" f"{top_command}</h1>",
             unsafe_allow_html=True,
         )
 
-    st.markdown("## All jobs")
+    st.markdown("## Task History")
     # Prepare stats DF for display
     stats_df.reset_index(drop=True, inplace=True)
     st.table(

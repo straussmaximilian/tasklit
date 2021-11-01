@@ -54,10 +54,10 @@ DEFAULT_TEST_COMMAND: str = (
 
 
 @dataclass
-class JobInformation:
+class TaskInformation:
     """Store information related to a specific job."""
 
-    job_name: str
+    task_name: str
     command: str
     average_duration: float
     executions: int = 1
