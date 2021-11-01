@@ -1,8 +1,10 @@
+from functools import reduce
+
 import streamlit as st
 
+from tasklit.pages.layouts.footer import footer
 from tasklit.settings.consts import H4_CSS_STYLE
 from tasklit.src.classes import app_db_handler
-from tasklit.src.utils.helpers import refresh_app
 
 
 def usage_dashboard() -> None:
@@ -31,10 +33,14 @@ def usage_dashboard() -> None:
             f"<h3 style='text-align: center;'>" f"Total Duration (min.)</h3>",
             unsafe_allow_html=True,
         )
-        sum_duration = stats_df["average_duration"].sum()
-        total_duration = round(round(total_runs * sum_duration, 2) / 60, 1)
+        duration = stats_df["average_duration"].values
+        execs = stats_df["executions"].values
+        total = reduce(
+            lambda t, tup: t + tup[0] * tup[1], zip(duration, execs), 0
+        )
+
         st.markdown(
-            f"<h4 style='{H4_CSS_STYLE}'>{total_duration}</h1>",
+            f"<h4 style='{H4_CSS_STYLE}'>{round(total / 60, 2)}</h1>",
             unsafe_allow_html=True,
         )
 
@@ -62,6 +68,4 @@ def usage_dashboard() -> None:
     stats_df.reset_index(drop=True, inplace=True)
     st.table(stats_df.sort_values(by=["executions"], ascending=False))
 
-    # Handle user triggered app refresh
-    if st.button("Refresh"):
-        refresh_app()
+    footer()

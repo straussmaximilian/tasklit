@@ -3,7 +3,7 @@ from dataclasses import asdict
 import pandas as pd
 
 from tasklit.settings.consts import JobInformation
-from tasklit.src.classes.storage_repositories import DataRepository
+from tasklit.src.classes.data_repository import DataRepository
 
 
 class JobStatCalculator:
@@ -30,9 +30,15 @@ class JobStatCalculator:
         )
 
     def _update_existing_job(self):
-        df_row_to_update = self._stats_df[
+        df_row_index = self._stats_df[
             self._stats_df["job_name"] == self._job_info.job_name
-        ].index[0]
+        ].index
+
+        if not df_row_index.any():
+            # TODO: replace with custom error
+            raise ValueError
+
+        df_row_to_update = df_row_index[0]
 
         init_count_exec = self._stats_df.at[df_row_to_update, "executions"]
         updated_count_exec = init_count_exec + 1

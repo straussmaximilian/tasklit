@@ -125,7 +125,7 @@ class JobObserver:
         """Retrieve value of a given argument from the function."""
         return args[self._function_argument_order[arg_name]]
 
-    def __call__(self, *args: Any, **kwargs: Any) -> Any:
+    def __call__(self, *args: str, **kwargs: Any) -> Any:
         """Main decorator method.
 
         Collect information about the job:
@@ -149,7 +149,7 @@ class JobObserver:
 
         self.job.job_name = job_name
         self.job.command = command
-        self.job.average_duration = round(job_duration, 2)
+        self.job.average_duration = job_duration
 
         calc = JobStatCalculator(self.job_statistics, app_db_handler)
 
