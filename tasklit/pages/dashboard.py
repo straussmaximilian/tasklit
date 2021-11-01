@@ -50,6 +50,8 @@ def usage_dashboard() -> None:
             unsafe_allow_html=True,
         )
 
+        # What if multiple commands have the same max? ->
+        # we auto pick the first one. Alternative could be to show multiple.
         top_execs_row = stats_df[
             stats_df["executions"] == stats_df["executions"].max()
         ].index
@@ -65,7 +67,12 @@ def usage_dashboard() -> None:
         )
 
     st.markdown("## All jobs")
+    # Prepare stats DF for display
     stats_df.reset_index(drop=True, inplace=True)
-    st.table(stats_df.sort_values(by=["executions"], ascending=False))
+    st.table(
+        stats_df.sort_values(by=["executions"], ascending=False).style.format(
+            {"average_duration": "{:.2f}"}
+        )
+    )
 
     footer()
