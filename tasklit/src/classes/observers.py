@@ -1,10 +1,17 @@
-"""Classes responsible for handling app usage statistics."""
+"""Classes responsible for gathering app usage statistics."""
 from inspect import signature
 from time import time
-from typing import Any, Callable, Dict, Set, Tuple
+from typing import Any, Callable, Dict, Protocol, Set, Tuple, Type
 
 from tasklit.settings.consts import JobInformation
+from tasklit.src.classes import app_db_handler
 from tasklit.src.classes.exceptions import ObserverArgumentsMissing
+from tasklit.src.classes.stat_calculator import JobStatCalculator
+
+
+class StatProcessor(Protocol):
+    def update_current_stats(self, *args, **kwargs):
+        pass
 
 
 class JobObserver:
@@ -100,14 +107,14 @@ class JobObserver:
             if param in self._args_to_find
         }
 
-    def _check_arguments_found(self):
+    def _check_arguments_found(self) -> None:
         """Validation check to see if we managed to find the arguments.
 
         Raises:
             ObserverArgumentsMissing: if some of the arguments could not
                 be found.
         """
-        missing_arguments = self._args_to_find - set(
+        missing_arguments: Set[str] = self._args_to_find - set(
             self._function_argument_order.keys()
         )
 
@@ -118,7 +125,7 @@ class JobObserver:
         """Retrieve value of a given argument from the function."""
         return args[self._function_argument_order[arg_name]]
 
-    def __call__(self, *args, **kwargs) -> Any:
+    def __call__(self, *args: Any, **kwargs: Any) -> Any:
         """Main decorator method.
 
         Collect information about the job:
@@ -140,9 +147,11 @@ class JobObserver:
 
         job_duration = round(end_time - start_time, 2)
 
-        self.job.name = job_name
+        self.job.job_name = job_name
         self.job.command = command
-        self.job.duration = job_duration
+        self.job.average_duration = round(job_duration, 2)
+
+        calc = JobStatCalculator(self.job_statistics, app_db_handler)
 
         return result
 
@@ -150,3 +159,10 @@ class JobObserver:
     def job_statistics(self) -> JobInformation:
         """Retrieve information about the executed job."""
         return self.job
+
+    # @staticmethod
+    # def _update_job(
+    #     processor: StatProcessor, job_details: JobInformation
+    # ) -> None:
+    #     proc = processor(job_details, app_db_handler)
+    #     proc._update_current_stats()

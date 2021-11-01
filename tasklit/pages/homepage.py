@@ -11,6 +11,7 @@ from tasklit.pages.layouts.homepage_new_task import (
     layout_homepage_define_new_task,
 )
 from tasklit.src.classes import app_db_handler
+from tasklit.src.classes.storage_repositories import DataRepository
 
 
 @helper_functions.app_exception_handler
@@ -25,7 +26,7 @@ def homepage() -> None:
 
     # Prepare and display process dataframe
     process_df = app_db_handler.load_dataframe(
-        app_db_handler.process_table_name
+        DataRepository.process_table_name
     )
     helper_functions.update_process_status_info(process_df)
     helper_functions.update_df_process_last_update_info(process_df)

@@ -57,6 +57,13 @@ DEFAULT_TEST_COMMAND: str = (
 class JobInformation:
     """Store information related to a specific job."""
 
-    name: str
+    job_name: str
     command: str
-    duration: float
+    average_duration: float
+    executions: int = 1
+
+
+MAIN_COLOR: str = "#f63366"
+H4_CSS_STYLE: str = (
+    f"text-align: center; font-size: 20px; color: {MAIN_COLOR};"
+)

@@ -16,7 +16,20 @@ from tasklit.settings.database_tables import DatabaseTable
 
 
 class DataRepository(ABC):
-    """Define key methods for loading and storing dataframe objects."""
+    """Define key methods for loading and storing dataframe objects.
+
+    Parameters:
+    ___________
+    process_table_name: str
+        name of the table with directly related process information, e.g.
+            pid, status, etc.
+    process_stats: str
+        name of the table with related process execution stats, e.g.
+            execution count, etc.
+    """
+
+    process_table_name: str = "processes"
+    stats_table_name: str = "process_stats"
 
     @abstractmethod
     def save_dataframe(self, *args: Any, **kwargs: Any) -> None:
@@ -40,12 +53,6 @@ class SQLDataRepository(DataRepository):
         string indicating and the type of and path to the database file.
     _sql_engine: sqlalchemy.engine
         sql alchemy engine to use to create the database.
-    process_table_name: str
-        name of the table with directly related process information, e.g.
-            pid, status, etc.
-    process_stats: str
-        name of the table with related process execution stats, e.g.
-            execution count, etc.
 
     Methods:
     ________
@@ -62,8 +69,6 @@ class SQLDataRepository(DataRepository):
         self._db_name = "process.db"
         self._tables = tables
         self._sql_engine = create_engine(sql_engine_uri, echo=False)
-        self.process_table_name = "processes"
-        self.stats_table_name = "process_stats"
 
     @staticmethod
     def _table_exists(sql_alchemy_engine: engine, table_name: str) -> bool:

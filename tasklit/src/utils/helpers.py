@@ -539,6 +539,7 @@ def create_process_info_dataframe(
     )
 
 
+# TODO: remove this function and respective unittest
 def save_df_to_sql(df: pd.DataFrame, sql_engine: engine) -> None:
     """
     Save dataframe with process information to a local sql alchemy DB file.
