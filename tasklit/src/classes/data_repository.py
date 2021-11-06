@@ -1,8 +1,9 @@
 """Classes responsible for handling data storage.
 
-Implement dependency inversion principle via the repository pattern.
-In the future we could have multiple storage repositories, working with
-different types of storage, e.g. sql, feather, hdf, etc.
+Use the repository pattern to invert dependency between application logic
+and lower level database operations. Enables flexibility to add multiple
+storage repositories, working with different storage types,
+e.g. sql, feather, hdf, etc.
 """
 
 from abc import ABC, abstractmethod
@@ -21,7 +22,7 @@ class DataRepository(ABC):
     Parameters:
     ___________
     process_table_name: str
-        name of the table with directly related process information, e.g.
+        name of the table with related process information, e.g.
             pid, status, etc.
     process_stats: str
         name of the table with related process execution stats, e.g.
@@ -56,6 +57,10 @@ class SQLDataRepository(DataRepository):
 
     Methods:
     ________
+    _table_exists()
+        check if a table exists in the DB.
+    create_tables_on_init()
+        create DB tables on app init.
     save_dataframe()
         implementation of the abstract interface method: save a dataframe to
             an SQLite database file.
@@ -68,7 +73,7 @@ class SQLDataRepository(DataRepository):
         """Initialization method."""
         self._db_name = "process.db"
         self._tables = tables
-        self._sql_engine = create_engine(sql_engine_uri, echo=False)
+        self._sql_engine: engine = create_engine(sql_engine_uri, echo=False)
 
     @staticmethod
     def _table_exists(sql_alchemy_engine: engine, table_name: str) -> bool:
@@ -96,15 +101,15 @@ class SQLDataRepository(DataRepository):
         if_exists: str = "append",
         col_data_types: Dict[str, Any] = None,
     ) -> None:
-        """Save a dataframe with process related information to an sql file.
+        """Save a dataframe to an sql file.
 
         Args:
-            df: process information df.
-            table_name: name of the SQL table to write to.
-            if_exists: string indicating what to do if table already exists,
+            df (pd.DataFrame): process information df.
+            table_name (str): name of the SQL table to write to.
+            if_exists (str): indicate what to do if the table already exists,
                 e.g. append, replace.
-            col_data_types: data types to use for columns when creating
-                the SQL schema.
+            col_data_types (Dict[str, Any]): data types to use for
+                columns when creating the SQL schema.
 
         Raises:
             OperationalError: if any sqlalchemy errors are thrown.
@@ -121,7 +126,7 @@ class SQLDataRepository(DataRepository):
             raise exc
 
     def load_dataframe(self, table_name: str) -> pd.DataFrame:
-        """Load a dataframe with process related information from an sql file.
+        """Load a dataframe from an sql file.
 
         Args:
             table_name: name of the database table to use.

@@ -1,17 +1,19 @@
 """Classes responsible for gathering app usage statistics."""
 from inspect import signature
 from time import time
-from typing import Any, Callable, Dict, Protocol, Set, Tuple, Type
+from typing import Any, Callable, Dict, Protocol, Set, Tuple
 
 from tasklit.settings.consts import TaskInformation
-from tasklit.src.classes import app_db_handler
 from tasklit.src.classes.exceptions import ObserverArgumentsMissing
 from tasklit.src.classes.stat_tracker import TaskStatisticsTracker
 
 
-class StatProcessor(Protocol):
-    def update_current_stats(self, *args, **kwargs):
-        pass
+class StatTracker(Protocol):
+    """Tracker protocol expected by TaskObserver."""
+
+    def update_task_stats(self, *args, **kwargs) -> None:
+        """Expected interface method for updating task stats."""
+        ...
 
 
 class TaskObserver:
@@ -34,8 +36,8 @@ class TaskObserver:
     _function_argument_order: Dict[str, int]
         function argument and respective order in the function definition,
             e.g. {'job_name': 1}.
-    job: JobInfo
-        container for storing job information, e.g. name, duration, etc.
+    _task: TaskInformation
+        container for storing task information, e.g. name, duration, etc.
 
     Methods:
     ________
@@ -47,8 +49,6 @@ class TaskObserver:
         retrieve respective argument value.
     __call__()
         main decorator entrypoint.
-    job_statistics()
-        retrieve job information.
     """
 
     def __init__(self, func: Callable):
@@ -63,7 +63,7 @@ class TaskObserver:
         self._function_argument_order: Dict[
             str, int
         ] = self._get_argument_position()
-        self.task: TaskInformation = TaskInformation("", "", 0)
+        self._task: TaskInformation = TaskInformation("", "", 0)
         self._check_arguments_found()
 
     @staticmethod
@@ -125,6 +125,11 @@ class TaskObserver:
         """Retrieve value of a given argument from the function."""
         return args[self._function_argument_order[arg_name]]
 
+    @staticmethod
+    def _run_task_tracker(task_tracker: StatTracker) -> None:
+        """Run task tracker workflow to update task information."""
+        task_tracker.update_task_stats()
+
     def __call__(self, *args: str, **kwargs: Any) -> Any:
         """Main decorator method.
 
@@ -147,24 +152,10 @@ class TaskObserver:
 
         task_duration = round(end_time - start_time, 2)
 
-        self.task.task_name = task_name
-        self.task.command = command
-        self.task.average_duration = task_duration
+        self._task.task_name = task_name
+        self._task.command = command
+        self._task.average_duration = task_duration
 
-        # TODO: separate into own method
-        calc = TaskStatisticsTracker(self.task_statistics, app_db_handler)
-        calc.update_current_stats()
+        self._run_task_tracker(TaskStatisticsTracker(self._task))
 
         return result
-
-    @property
-    def task_statistics(self) -> TaskInformation:
-        """Retrieve information about the executed job."""
-        return self.task
-
-    # @staticmethod
-    # def _update_job(
-    #     processor: StatProcessor, job_details: TaskInformation
-    # ) -> None:
-    #     proc = processor(job_details, app_db_handler)
-    #     proc._update_current_stats()
