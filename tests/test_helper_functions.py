@@ -1,61 +1,52 @@
+import os
 import unittest
-
 from datetime import datetime, timedelta
-from unittest.mock import (
-    create_autospec,
-    mock_open,
-    patch,
-    MagicMock,
-    call
-)
+from unittest.mock import MagicMock, call, create_autospec, mock_open, patch
 
 import pandas as pd
 import psutil
-
 from pandas.testing import assert_frame_equal
 from sqlalchemy.exc import OperationalError
 from streamlit.script_runner import RerunException
 
+from tasklit.settings.consts import DEFAULT_LOG_DIR_OUT, WEEK_DAYS
 from tasklit.src.utils.helpers import (
-    get_task_id,
+    app_exception_handler,
+    calculate_execution_start,
     check_last_process_info_update,
+    create_folder_if_not_exists,
+    create_process_info_dataframe,
+    display_process_log_file,
+    execute_job,
+    get_command_execution_start,
+    get_execution_interval_information,
+    get_interval_duration,
+    get_task_id,
+    get_time_interval_info,
+    launch_command_process,
+    match_duration,
+    match_weekday,
+    process_should_execute,
     read_log,
+    refresh_app,
+    schedule_process_job,
+    select_weekdays,
+    start_scheduler_process,
+    submit_job,
     terminate_child_processes,
     terminate_process,
-    match_weekday,
-    refresh_app,
-    launch_command_process,
-    display_process_log_file,
-    update_df_process_last_update_info,
-    get_process_df,
-    update_process_status_info,
-    submit_job,
-    start_scheduler_process,
-    save_df_to_sql,
-    create_process_info_dataframe,
-    write_job_execution_log,
-    process_should_execute,
-    app_exception_handler,
-    create_folder_if_not_exists,
     test_command_run,
-    get_time_interval_info,
-    select_weekdays,
-    get_execution_interval_information,
-    calculate_execution_start,
-    get_command_execution_start,
-    match_duration,
-    schedule_process_job,
-    execute_job,
-    get_interval_duration
+    update_df_process_last_update_info,
+    update_process_status_info,
+    write_job_execution_log,
 )
 from tasklit.src.utils.job_names import get_job_name
-from tasklit.settings.consts import WEEK_DAYS, FORMAT, DEFAULT_LOG_DIR_OUT
-import os
 
-if os.name == 'nt':
-    DEFAULT_TEST_COMMAND = 'ping 8.8.8.8'
+if os.name == "nt":
+    DEFAULT_TEST_COMMAND = "ping 8.8.8.8"
 else:
-    DEFAULT_TEST_COMMAND = 'ping 8.8.8.8 -c 5'
+    DEFAULT_TEST_COMMAND = "ping 8.8.8.8 -c 5"
+
 
 class UtilFunctionsTestCase(unittest.TestCase):
     """
@@ -103,8 +94,10 @@ class UtilFunctionsTestCase(unittest.TestCase):
         )
 
         cls.test_command = DEFAULT_TEST_COMMAND
-        HOME_DIR = os.path.join(os.path.expanduser ('~'),'.tasklit')
-        cls.stdout_log_filepath = os.path.join(HOME_DIR, 'logs/infallible_strauss_stdout.txt')
+        HOME_DIR = os.path.join(os.path.expanduser("~"), ".tasklit")
+        cls.stdout_log_filepath = os.path.join(
+            HOME_DIR, "logs/infallible_strauss_stdout.txt"
+        )
         cls.now_datetime = datetime(2021, 1, 1, 00, 00)
 
     @staticmethod
@@ -122,28 +115,29 @@ class UtilFunctionsTestCase(unittest.TestCase):
         """
         self.assertEqual(get_task_id(self.test_df), max(self.task_ids) + 1)
 
-    @patch('os.path.getmtime')
-    def test_check_last_process_info_update(self,
-                                            mock_getmtime: MagicMock):
+    @patch("os.path.getmtime")
+    def test_check_last_process_info_update(self, mock_getmtime: MagicMock):
         """
         GIVEN a job name that corresponds to a job log file
         WHEN passed to the 'check_last_process_info_update' function
         THEN check that correct edit timestamp is identified.
         """
         mock_getmtime.return_value = 1629554559
-        with patch('tasklit.src.utils.helpers.datetime') as mock_datetime:
+        with patch("tasklit.src.utils.helpers.datetime") as mock_datetime:
             mock_datetime.fromtimestamp.return_value = "2018-12-25 09:27:53"
 
-            self.assertEqual(check_last_process_info_update(
-                self.test_job_name
-            ), mock_datetime.fromtimestamp.return_value)
+            self.assertEqual(
+                check_last_process_info_update(self.test_job_name),
+                mock_datetime.fromtimestamp.return_value,
+            )
 
             mock_getmtime.assert_called()
             mock_datetime.fromtimestamp.assert_called()
 
-    @patch('os.path.getmtime')
-    def test_check_last_process_info_update_raises_error(self,
-                                                         mock_getmtime: MagicMock):
+    @patch("os.path.getmtime")
+    def test_check_last_process_info_update_raises_error(
+        self, mock_getmtime: MagicMock
+    ):
         """
         GIVEN a job name that corresponds to a missing job log file
         WHEN passed to the 'check_last_process_info_update' function
@@ -151,8 +145,7 @@ class UtilFunctionsTestCase(unittest.TestCase):
         """
         mock_getmtime.side_effect = OSError("An error happened.")
         self.assertEqual(
-            check_last_process_info_update(self.test_job_name),
-            None
+            check_last_process_info_update(self.test_job_name), None
         )
 
     def test_read_log_file_exists(self):
@@ -161,9 +154,15 @@ class UtilFunctionsTestCase(unittest.TestCase):
         WHEN passed to the 'read_log' function
         THEN check that correct read output is returned.
         """
-        with patch('builtins.open', mock_open(read_data="Line of text")) as mock_file:
-            self.assertEqual(read_log(self.test_log_filename), self.log_readlines_output)
-            mock_file.assert_called_with(self.test_log_filename, 'r', encoding='utf-8')
+        with patch(
+            "builtins.open", mock_open(read_data="Line of text")
+        ) as mock_file:
+            self.assertEqual(
+                read_log(self.test_log_filename), self.log_readlines_output
+            )
+            mock_file.assert_called_with(
+                self.test_log_filename, "r", encoding="utf-8"
+            )
 
     def test_read_log_raises_error(self):
         """
@@ -171,14 +170,17 @@ class UtilFunctionsTestCase(unittest.TestCase):
         WHEN passed to the 'read_log' function
         THEN check that FileNotFoundError is raised.
         """
-        with patch('builtins.open') as mock_open_raises:
+        with patch("builtins.open") as mock_open_raises:
             mock_open_raises.side_effect = FileNotFoundError
             with self.assertRaises(FileNotFoundError):
-                self.assertEqual(read_log(self.test_log_filename), self.log_readlines_output)
+                self.assertEqual(
+                    read_log(self.test_log_filename), self.log_readlines_output
+                )
 
-    @patch('psutil.wait_procs')
-    def test_terminate_child_processes_processes_found(self,
-                                                       mock_wait_procs: MagicMock):
+    @patch("psutil.wait_procs")
+    def test_terminate_child_processes_processes_found(
+        self, mock_wait_procs: MagicMock
+    ):
         """
         GIVEN a parent process object that has spawned child processes
         WHEN passed to the 'terminate_child_processes' function
@@ -186,23 +188,22 @@ class UtilFunctionsTestCase(unittest.TestCase):
         """
         parent_process = MagicMock()
         parent_process.children.return_value = [
-            MagicMock(
-                name="Child Proc 1",
-                terminate=lambda: True
-            ),
-            MagicMock(
-                name="Child Proc 2",
-                terminate=lambda: True
-            )
+            MagicMock(name="Child Proc 1", terminate=lambda: True),
+            MagicMock(name="Child Proc 2", terminate=lambda: True),
         ]
-        mock_wait_procs.return_value = ([], [
-            MagicMock(return_value=lambda: True),
-            MagicMock(return_value=lambda: True)
-        ])
+        mock_wait_procs.return_value = (
+            [],
+            [
+                MagicMock(return_value=lambda: True),
+                MagicMock(return_value=lambda: True),
+            ],
+        )
 
         # Check that process.terminate() is being called on child processes
         for child_process in parent_process.children.return_value:
-            mock_terminate = create_autospec(child_process.teminate, return_value=True)
+            mock_terminate = create_autospec(
+                child_process.teminate, return_value=True
+            )
 
             terminate_child_processes(parent_process)
 
@@ -212,16 +213,19 @@ class UtilFunctionsTestCase(unittest.TestCase):
         # Check that process.terminate() is being called on any child processes
         # that might have been left alive.
         for alive_process in mock_wait_procs.return_value[1]:
-            mock_terminate = create_autospec(alive_process.terminate, return_value=True)
+            mock_terminate = create_autospec(
+                alive_process.terminate, return_value=True
+            )
 
             terminate_child_processes(parent_process)
 
             mock_wait_procs.assert_called()
             mock_terminate.assert_called()
 
-    @patch('psutil.wait_procs')
-    def test_terminate_child_processes_processes_not_found(self,
-                                                           mock_wait_procs: MagicMock):
+    @patch("psutil.wait_procs")
+    def test_terminate_child_processes_processes_not_found(
+        self, mock_wait_procs: MagicMock
+    ):
         """
         GIVEN a parent process object that has NOT spawned child processes
         WHEN passed to the 'terminate_child_processes' function
@@ -233,7 +237,9 @@ class UtilFunctionsTestCase(unittest.TestCase):
 
         # Check that process.terminate() is not called
         for child_process in parent_process.children.return_value:
-            mock_terminate = create_autospec(child_process.teminate, return_value=True)
+            mock_terminate = create_autospec(
+                child_process.teminate, return_value=True
+            )
 
             terminate_child_processes(parent_process)
 
@@ -242,29 +248,38 @@ class UtilFunctionsTestCase(unittest.TestCase):
 
         # Check that process.terminate() is not called
         for alive_process in mock_wait_procs.return_value[1]:
-            mock_terminate = create_autospec(alive_process.terminate, return_value=True)
+            mock_terminate = create_autospec(
+                alive_process.terminate, return_value=True
+            )
 
             terminate_child_processes(parent_process)
 
             mock_wait_procs.assert_not_called()
             mock_terminate.assert_not_called()
 
-    @patch('tasklit.src.utils.helpers.terminate_child_processes')
-    def test_terminate_process_with_child_processes(self,
-                                                    mock_terminate_child_procs: MagicMock):
+    @patch("tasklit.src.utils.helpers.terminate_child_processes")
+    def test_terminate_process_with_child_processes(
+        self, mock_terminate_child_procs: MagicMock
+    ):
         """
         GIVEN an ID of an existing process
         WHEN passed to the 'terminate_process' function
         THEN check that related process termination methods have been called.
         """
-        with patch('tasklit.src.utils.helpers.psutil.Process') as mock_psutil_process:
+        with patch(
+            "tasklit.src.utils.helpers.psutil.Process"
+        ) as mock_psutil_process:
             mock_psutil_process.return_value = MagicMock()
             mock_terminate_child_procs.return_value = True
             mock_psutil_process.terminate.return_value = lambda: True
-            mock_terminate = create_autospec(mock_psutil_process.terminate, return_value=True)
+            mock_terminate = create_autospec(
+                mock_psutil_process.terminate, return_value=True
+            )
 
             mock_psutil_process.kill.return_value = lambda: True
-            mock_kill = create_autospec(mock_psutil_process.kill, return_value=True)
+            mock_kill = create_autospec(
+                mock_psutil_process.kill, return_value=True
+            )
 
             terminate_process(self.test_process_id)
 
@@ -278,8 +293,12 @@ class UtilFunctionsTestCase(unittest.TestCase):
         WHEN passed to the 'terminate_process' function
         THEN check that psutil.NoSuchProcess error is raised.
         """
-        with patch('tasklit.src.utils.helpers.psutil.Process') as mock_psutil_process:
-            mock_psutil_process.side_effect = psutil.NoSuchProcess("Cannot find the process.")
+        with patch(
+            "tasklit.src.utils.helpers.psutil.Process"
+        ) as mock_psutil_process:
+            mock_psutil_process.side_effect = psutil.NoSuchProcess(
+                "Cannot find the process."
+            )
             with self.assertRaises(psutil.NoSuchProcess):
                 terminate_process(self.test_process_id)
 
@@ -289,13 +308,13 @@ class UtilFunctionsTestCase(unittest.TestCase):
         WHEN passed to the 'function_should_execute' function
         THEN check that correct decision is made to execute a function if the days are mapped.
         """
-        with patch('tasklit.src.utils.helpers.datetime') as mock_datetime:
+        with patch("tasklit.src.utils.helpers.datetime") as mock_datetime:
             for day_number, day in WEEK_DAYS.items():
                 mock_datetime.now.weekday.return_value = day_number
-                self.assertEqual(match_weekday(
-                    mock_datetime.now,
-                    list(WEEK_DAYS.values())
-                ), True)
+                self.assertEqual(
+                    match_weekday(mock_datetime.now, list(WEEK_DAYS.values())),
+                    True,
+                )
 
     def test_match_weekday_no_weekdays_provided(self):
         """
@@ -303,12 +322,8 @@ class UtilFunctionsTestCase(unittest.TestCase):
         WHEN passed to the 'function_should_execute' function
         THEN check that correct decision is made to execute a function.
         """
-        with patch('tasklit.src.utils.helpers.datetime') as mock_datetime:
-            self.assertEqual(
-                match_weekday(
-                    mock_datetime.now,
-                    []
-                ), True)
+        with patch("tasklit.src.utils.helpers.datetime") as mock_datetime:
+            self.assertEqual(match_weekday(mock_datetime.now, []), True)
 
     def test_match_weekday_no_execution(self):
         """
@@ -316,14 +331,12 @@ class UtilFunctionsTestCase(unittest.TestCase):
         WHEN passed to the 'function_should_execute' function
         THEN check that correct decision is made to NOT execute a function if the days cannot be mapped.
         """
-        with patch('tasklit.src.utils.helpers.datetime') as mock_datetime:
+        with patch("tasklit.src.utils.helpers.datetime") as mock_datetime:
             for day_number, day in WEEK_DAYS.items():
                 mock_datetime.now.weekday.return_value = day_number
                 self.assertEqual(
-                    match_weekday(
-                        mock_datetime.now,
-                        ["Uknown Day"]
-                    ), False)
+                    match_weekday(mock_datetime.now, ["Uknown Day"]), False
+                )
 
     def test_match_weekday_raises_error(self):
         """
@@ -331,26 +344,31 @@ class UtilFunctionsTestCase(unittest.TestCase):
         WHEN passed to the 'function_should_execute' function
         THEN check that an error is raised if the number is missing in the app settings day mapping.
         """
-        with patch('tasklit.src.utils.helpers.datetime') as mock_datetime:
+        with patch("tasklit.src.utils.helpers.datetime") as mock_datetime:
             for day_number, day in WEEK_DAYS.items():
                 mock_datetime.now.weekday.return_value = day_number
 
-                with patch('tasklit.settings.consts.WEEK_DAYS') as mocked_weekdays:
-                    mocked_weekdays.__getitem__.side_effect = KeyError("Failed to map the day.")
+                with patch(
+                    "tasklit.settings.consts.WEEK_DAYS"
+                ) as mocked_weekdays:
+                    mocked_weekdays.__getitem__.side_effect = KeyError(
+                        "Failed to map the day."
+                    )
 
                     with self.assertRaises(KeyError):
                         match_weekday(
-                            mock_datetime.now,
-                            list(WEEK_DAYS.values())
+                            mock_datetime.now, list(WEEK_DAYS.values())
                         )
 
-    @patch('time.sleep')
-    @patch('tasklit.src.utils.helpers.st.empty')
-    @patch('tasklit.src.utils.helpers.st.script_request_queue.RerunData')
-    def test_refresh_app(self,
-                         mock_rerun_data: MagicMock,
-                         mock_st_empty: MagicMock,
-                         mock_sleep: MagicMock):
+    @patch("time.sleep")
+    @patch("tasklit.src.utils.helpers.st.empty")
+    @patch("tasklit.src.utils.helpers.st.script_request_queue.RerunData")
+    def test_refresh_app(
+        self,
+        mock_rerun_data: MagicMock,
+        mock_st_empty: MagicMock,
+        mock_sleep: MagicMock,
+    ):
         """
         GIVEN an optional amount of time to wait in seconds
         WHEN passed to the 'refresh_app' function
@@ -366,13 +384,15 @@ class UtilFunctionsTestCase(unittest.TestCase):
             mock_rerun_data.assert_called()
             mock_sleep.assert_called()
 
-    @patch('time.sleep')
-    @patch('tasklit.src.utils.helpers.st.empty')
-    @patch('tasklit.src.utils.helpers.st.script_request_queue.RerunData')
-    def test_refresh_app_raises_error(self,
-                                      mock_rerun_data: MagicMock,
-                                      mock_st_empty: MagicMock,
-                                      mock_sleep: MagicMock):
+    @patch("time.sleep")
+    @patch("tasklit.src.utils.helpers.st.empty")
+    @patch("tasklit.src.utils.helpers.st.script_request_queue.RerunData")
+    def test_refresh_app_raises_error(
+        self,
+        mock_rerun_data: MagicMock,
+        mock_st_empty: MagicMock,
+        mock_sleep: MagicMock,
+    ):
         """
         GIVEN no time to wait in seconds
         WHEN passed to the 'refresh_app' function
@@ -385,38 +405,41 @@ class UtilFunctionsTestCase(unittest.TestCase):
             mock_sleep.assert_not_called()
             mock_rerun_data.assert_called()
 
-    @patch('tasklit.src.utils.helpers.Popen')
-    def test_launch_command_process(self,
-                                    mock_popen: MagicMock):
+    @patch("tasklit.src.utils.helpers.Popen")
+    def test_launch_command_process(self, mock_popen: MagicMock):
         """
         GIVEN a command to execute and a respective job name
         WHEN passed to the 'run_job' function
         THEN check that correct object type is returned.
         """
         mock_popen.return_value = MagicMock()
-        with patch('builtins.open', mock_open(read_data=self.test_command)) as mock_file:
+        with patch(
+            "builtins.open", mock_open(read_data=self.test_command)
+        ) as mock_file:
             self.assertEqual(
-                launch_command_process(self.test_command, self.test_log_filename),
-                mock_popen.return_value
+                launch_command_process(
+                    self.test_command, self.test_log_filename
+                ),
+                mock_popen.return_value,
             )
-            mock_file.assert_called_with(self.test_log_filename, 'w')
+            mock_file.assert_called_with(self.test_log_filename, "w")
 
-    @patch('tasklit.src.utils.helpers.Popen')
-    def test_launch_command_process_raises_error(self,
-                                                 mock_popen: MagicMock):
+    @patch("tasklit.src.utils.helpers.Popen")
+    def test_launch_command_process_raises_error(self, mock_popen: MagicMock):
         """
         GIVEN a command to execute and a respective job name
         WHEN passed to the 'run_job' function
         THEN check that an error is raised if log file creation fails.
         """
         mock_popen.side_effect = OSError("File creation failed.")
-        with patch('builtins.open', mock_open(read_data=self.test_command)):
+        with patch("builtins.open", mock_open(read_data=self.test_command)):
             with self.assertRaises(OSError):
-                launch_command_process(self.test_command, self.test_log_filename)
+                launch_command_process(
+                    self.test_command, self.test_log_filename
+                )
 
-    @patch('tasklit.src.utils.helpers.read_log')
-    def test_display_process_log_file_exists(self,
-                                             mock_read_log: MagicMock):
+    @patch("tasklit.src.utils.helpers.read_log")
+    def test_display_process_log_file_exists(self, mock_read_log: MagicMock):
         """
         GIVEN a name of an existing log file
         WHEN passed to the 'display_process_log_file' function
@@ -429,9 +452,8 @@ class UtilFunctionsTestCase(unittest.TestCase):
         mock_read_log.assert_called()
         self.assertEqual(result, "Line of text")
 
-    @patch('tasklit.src.utils.helpers.read_log')
-    def test_display_process_log_file_missing(self,
-                                              mock_read_log: MagicMock):
+    @patch("tasklit.src.utils.helpers.read_log")
+    def test_display_process_log_file_missing(self, mock_read_log: MagicMock):
         """
         GIVEN a name of a log file that doesn't exist
         WHEN passed to the 'display_process_log_file' function
@@ -442,11 +464,14 @@ class UtilFunctionsTestCase(unittest.TestCase):
         result = display_process_log_file(self.test_log_filename)
 
         mock_read_log.assert_called()
-        self.assertEqual(result, f"Waiting for {self.test_log_filename} to be created...")
+        self.assertEqual(
+            result, f"Waiting for {self.test_log_filename} to be created..."
+        )
 
-    @patch('tasklit.src.utils.helpers.check_last_process_info_update')
-    def test_update_df_process_last_update_info(self,
-                                                mock_check_update: MagicMock):
+    @patch("tasklit.src.utils.helpers.check_last_process_info_update")
+    def test_update_df_process_last_update_info(
+        self, mock_check_update: MagicMock
+    ):
         """
         GIVEN a pandas dataframe with a 'last update' column
         WHEN passed to the 'update_df_process_last_update_info' function
@@ -459,46 +484,11 @@ class UtilFunctionsTestCase(unittest.TestCase):
 
         self.assertEqual(self.test_df.at[0, "last update"], last_update_date)
 
-    @patch('tasklit.src.utils.helpers.pd.read_sql_table')
-    def test_get_process_df_no_error_raised(self,
-                                            mock_pd_read_sql_table: MagicMock):
-        """
-        GIVEN an sql engine for reading an SQL file
-        WHEN passed to the 'get_process_df' function
-        THEN check that a pandas dataframe with all the rows is returned.
-        """
-        mock_pd_read_sql_table.return_value = self.test_df
-
-        assert_frame_equal(get_process_df("sql_engine"), self.test_df)
-
-    @patch('tasklit.src.utils.helpers.pd.read_sql_table')
-    def test_get_process_df_returns_empty_df(self,
-                                             mock_pd_read_sql_table: MagicMock):
-        """
-        GIVEN an sql engine for reading an SQL file
-        WHEN passed to the 'get_process_df' function
-        THEN check that - if the file is missing - an empty dataframe is returned.
-        """
-        mock_pd_read_sql_table.side_effect = ValueError("Dataframe file is missing.")
-        assert_frame_equal(get_process_df("sql_engine"), pd.DataFrame(FORMAT))
-
-    @patch('tasklit.src.utils.helpers.pd.read_sql_table')
-    def test_get_process_df_raises_error(self,
-                                         mock_pd_read_sql_table: MagicMock):
-        """
-        GIVEN an sql engine for reading an SQL file with a pandas DF
-        WHEN passed to the 'get_process_df' function
-        THEN check that OperationalError is raised if the file is missing.
-        """
-        mock_pd_read_sql_table.side_effect = OperationalError("Couldn't process DF.", {}, "")
-        with self.assertRaises(OperationalError):
-            get_process_df("sql_engine")
-
     @patch.object(psutil.Process, "status")
-    @patch('tasklit.src.utils.helpers.psutil.pid_exists')
-    def test_update_process_status_info_running_process(self,
-                                                        mock_pid_exists: MagicMock,
-                                                        mock_process_status: MagicMock):
+    @patch("tasklit.src.utils.helpers.psutil.pid_exists")
+    def test_update_process_status_info_running_process(
+        self, mock_pid_exists: MagicMock, mock_process_status: MagicMock
+    ):
         """
         GIVEN a dataframe with information for an existing running process
         WHEN passed to the 'update_process_status_info' function
@@ -512,10 +502,10 @@ class UtilFunctionsTestCase(unittest.TestCase):
         self.assertEqual(self.test_df.at[0, "running"], True)
 
     @patch.object(psutil.Process, "status")
-    @patch('tasklit.src.utils.helpers.psutil.pid_exists')
-    def test_update_process_status_info_zombie_process(self,
-                                                       mock_pid_exists: MagicMock,
-                                                       mock_process_status: MagicMock):
+    @patch("tasklit.src.utils.helpers.psutil.pid_exists")
+    def test_update_process_status_info_zombie_process(
+        self, mock_pid_exists: MagicMock, mock_process_status: MagicMock
+    ):
         """
         GIVEN a dataframe with information for an existing zombie process
         WHEN passed to the 'update_process_status_info' function
@@ -528,9 +518,10 @@ class UtilFunctionsTestCase(unittest.TestCase):
 
         self.assertEqual(self.test_df.at[0, "running"], False)
 
-    @patch('tasklit.src.utils.helpers.psutil.pid_exists')
-    def test_update_process_status_info_missing_process(self,
-                                                        mock_pid_exists: MagicMock):
+    @patch("tasklit.src.utils.helpers.psutil.pid_exists")
+    def test_update_process_status_info_missing_process(
+        self, mock_pid_exists: MagicMock
+    ):
         """
         GIVEN a dataframe with information for a process that does not exist
         WHEN passed to the 'update_process_status_info' function
@@ -542,13 +533,15 @@ class UtilFunctionsTestCase(unittest.TestCase):
 
         self.assertEqual(self.test_df.at[0, "running"], False)
 
-    @patch('tasklit.src.utils.helpers.save_df_to_sql')
-    @patch('tasklit.src.utils.helpers.create_process_info_dataframe')
-    @patch('tasklit.src.utils.helpers.start_scheduler_process')
-    def test_submit_job(self,
-                        mock_start_process: MagicMock,
-                        mock_create_df: MagicMock,
-                        mock_save_df: MagicMock):
+    @patch("tasklit.src.utils.helpers.app_db_handler.save_dataframe")
+    @patch("tasklit.src.utils.helpers.create_process_info_dataframe")
+    @patch("tasklit.src.utils.helpers.start_scheduler_process")
+    def test_submit_job(
+        self,
+        mock_start_process: MagicMock,
+        mock_create_df: MagicMock,
+        mock_save_df: MagicMock,
+    ):
         """
         GIVEN job execution parameters
         WHEN passed to the 'submit_job' function
@@ -567,32 +560,22 @@ class UtilFunctionsTestCase(unittest.TestCase):
             "test",
             "test",
             1,
-            "test"
         )
 
         mock_start_process.assert_called_with(
-            'test',
-            'test',
+            "test",
+            "test",
             datetime(2020, 1, 1, 0, 0),
             timedelta(days=1),
             None,
-            'test',
-            'test'
+            "test",
+            "test",
         )
-        mock_create_df.assert_called_with(
-            'test',
-            'test',
-            True,
-            1
-        )
-        mock_save_df.assert_called_with(
-            True,
-            'test'
-        )
+        mock_create_df.assert_called_with("test", "test", True, 1)
+        mock_save_df.assert_called_with(True, "processes")
 
-    @patch('tasklit.src.utils.helpers.Process')
-    def test_start_scheduler_process(self,
-                                     mock_process: MagicMock):
+    @patch("tasklit.src.utils.helpers.Process")
+    def test_start_scheduler_process(self, mock_process: MagicMock):
         """
         GIVEN job execution parameters
         WHEN passed to the 'start_process' function
@@ -611,33 +594,10 @@ class UtilFunctionsTestCase(unittest.TestCase):
                 timedelta(days=1),
                 None,
                 "test",
-                "test"
+                "test",
             ),
-            process_mock.pid
+            process_mock.pid,
         )
-
-    @patch('tasklit.src.utils.helpers.pd.DataFrame')
-    def test_save_df_to_sql(self,
-                            mock_df: MagicMock):
-        """
-        GIVEN a mocked pd.Dataframe object
-        WHEN passed to the 'save_df_to_sql' function
-        THEN check that df.to_sql method is called with correct parameters.
-        """
-        save_df_to_sql(mock_df, "engine")
-        mock_df.to_sql.assert_called_with('processes', con='engine', if_exists='append', index=False)
-
-    @patch('tasklit.src.utils.helpers.pd.DataFrame')
-    def test_save_df_to_sql_raises_error(self,
-                                         mock_df: MagicMock):
-        """
-        GIVEN a mocked pd.Dataframe object
-        WHEN passed to the 'save_df_to_sql' function
-        THEN check that an error is raised if sql file creation fails.
-        """
-        mock_df.to_sql.side_effect = OperationalError("Failed to create the sql file.", {}, "")
-        with self.assertRaises(OperationalError):
-            save_df_to_sql(mock_df, "engine")
 
     def test_create_process_info_dataframe(self):
         """
@@ -645,18 +605,15 @@ class UtilFunctionsTestCase(unittest.TestCase):
         WHEN passed to the 'create_process_info_dataframe' function
         THEN check that a dataframe with these parameters is returned.
         """
-        with patch('tasklit.src.utils.helpers.datetime') as mock_datetime:
+        with patch("tasklit.src.utils.helpers.datetime") as mock_datetime:
             mock_datetime.now.return_value = None
             test_df_copy = self.test_df.copy()
             test_df_copy["created"] = mock_datetime.now.return_value
             assert_frame_equal(
                 create_process_info_dataframe(
-                    None,
-                    self.test_job_name,
-                    None,
-                    self.task_ids[0]
+                    None, self.test_job_name, None, self.task_ids[0]
                 ),
-                self.test_df
+                self.test_df,
             )
 
     def test_write_job_execution_log(self):
@@ -665,26 +622,32 @@ class UtilFunctionsTestCase(unittest.TestCase):
         WHEN passed to the 'write_job_execution_log' function
         THEN check that correct log file information is logged.
         """
-        with patch('tasklit.src.utils.helpers.datetime') as mock_datetime:
-            mock_datetime.now.strftime.return_value = '2021-01-01 00:00:00'
+        with patch("tasklit.src.utils.helpers.datetime") as mock_datetime:
+            mock_datetime.now.strftime.return_value = "2021-01-01 00:00:00"
 
-            with patch('builtins.open', mock_open()) as mock_file:
+            with patch("builtins.open", mock_open()) as mock_file:
                 write_job_execution_log(
                     self.test_job_name,
                     self.test_command,
                     mock_datetime.now,
-                    "Executed"
+                    "Executed",
                 )
 
-                mock_file.return_value.write.assert_has_calls([
-                    # 1 call for '*.txt' log write
-                    call(f'2021-01-01 00:00:00 Executed {DEFAULT_TEST_COMMAND}\n'),
-                    # 2 calls for '*_stdout.txt' log write
-                    call(f"\n{'=' * 70} \n"),
-                    call(f'2021-01-01 00:00:00 Executed {DEFAULT_TEST_COMMAND}\n')
-                ])
+                mock_file.return_value.write.assert_has_calls(
+                    [
+                        # 1 call for '*.txt' log write
+                        call(
+                            f"2021-01-01 00:00:00 Executed {DEFAULT_TEST_COMMAND}\n"
+                        ),
+                        # 2 calls for '*_stdout.txt' log write
+                        call(f"\n{'=' * 70} \n"),
+                        call(
+                            f"2021-01-01 00:00:00 Executed {DEFAULT_TEST_COMMAND}\n"
+                        ),
+                    ]
+                )
 
-                mock_file.assert_called_with(self.stdout_log_filepath, 'a')
+                mock_file.assert_called_with(self.stdout_log_filepath, "a")
 
     def test_write_job_execution_log_raises_error(self):
         """
@@ -692,10 +655,10 @@ class UtilFunctionsTestCase(unittest.TestCase):
         WHEN passed to the 'write_job_execution_log' function
         THEN check that an error is raised if the log file cannot be accessed.
         """
-        with patch('tasklit.src.utils.helpers.datetime') as mock_datetime:
-            mock_datetime.now.strftime.return_value = '2021-01-01 00:00:00'
+        with patch("tasklit.src.utils.helpers.datetime") as mock_datetime:
+            mock_datetime.now.strftime.return_value = "2021-01-01 00:00:00"
 
-            with patch('builtins.open', mock_open()) as mock_file:
+            with patch("builtins.open", mock_open()) as mock_file:
                 mock_file.side_effect = OSError
 
                 with self.assertRaises(OSError):
@@ -703,14 +666,14 @@ class UtilFunctionsTestCase(unittest.TestCase):
                         self.test_job_name,
                         self.test_command,
                         mock_datetime.now,
-                        "Executed"
+                        "Executed",
                     )
 
-    @patch('tasklit.src.utils.helpers.match_duration')
-    @patch('tasklit.src.utils.helpers.match_weekday')
-    def test_process_should_execute(self,
-                                    mock_match_weekday: MagicMock,
-                                    mock_match_duration: MagicMock):
+    @patch("tasklit.src.utils.helpers.match_duration")
+    @patch("tasklit.src.utils.helpers.match_weekday")
+    def test_process_should_execute(
+        self, mock_match_weekday: MagicMock, mock_match_duration: MagicMock
+    ):
         """
         GIVEN current daytime information
         WHEN passed to the 'test_process_should_execute' function
@@ -719,20 +682,18 @@ class UtilFunctionsTestCase(unittest.TestCase):
         mock_match_weekday.return_value = True
         mock_match_duration.return_value = True
 
-        self.assertEqual(process_should_execute(
-            datetime.now(),
-            datetime.now(),
-            timedelta(1),
-            []
-        ),
-            True
+        self.assertEqual(
+            process_should_execute(
+                datetime.now(), datetime.now(), timedelta(1), []
+            ),
+            True,
         )
 
-    @patch('tasklit.src.utils.helpers.match_duration')
-    @patch('tasklit.src.utils.helpers.match_weekday')
-    def test_process_should_not_execute(self,
-                                        mock_match_weekday: MagicMock,
-                                        mock_match_duration: MagicMock):
+    @patch("tasklit.src.utils.helpers.match_duration")
+    @patch("tasklit.src.utils.helpers.match_weekday")
+    def test_process_should_not_execute(
+        self, mock_match_weekday: MagicMock, mock_match_duration: MagicMock
+    ):
         """
         GIVEN current daytime information
         WHEN passed to the 'test_process_should_execute' function
@@ -742,20 +703,18 @@ class UtilFunctionsTestCase(unittest.TestCase):
         mock_match_weekday.return_value = True
         mock_match_duration.return_value = False
 
-        self.assertEqual(process_should_execute(
-            datetime.now(),
-            datetime.now(),
-            timedelta(1),
-            []
-        ),
-            False
+        self.assertEqual(
+            process_should_execute(
+                datetime.now(), datetime.now(), timedelta(1), []
+            ),
+            False,
         )
 
-    @patch('tasklit.src.utils.helpers.st.error')
-    @patch('tasklit.src.utils.helpers.refresh_app')
-    def test_app_exception_handler_not_raises_error(self,
-                                                    mock_refresh_app: MagicMock,
-                                                    mock_st_error: MagicMock):
+    @patch("tasklit.src.utils.helpers.st.error")
+    @patch("tasklit.src.utils.helpers.refresh_app")
+    def test_app_exception_handler_not_raises_error(
+        self, mock_refresh_app: MagicMock, mock_st_error: MagicMock
+    ):
         """
         GIVEN a function defined with the exception handler decorator
         WHEN this function is called without triggering an exception
@@ -769,11 +728,11 @@ class UtilFunctionsTestCase(unittest.TestCase):
         mock_refresh_app.assert_not_called()
         mock_st_error.assert_not_called()
 
-    @patch('tasklit.src.utils.helpers.st.error')
-    @patch('tasklit.src.utils.helpers.traceback.format_exc')
-    def test_app_exception_handler_raises_error(self,
-                                                mock_format_exc: MagicMock,
-                                                mock_st_error: MagicMock):
+    @patch("tasklit.src.utils.helpers.st.error")
+    @patch("tasklit.src.utils.helpers.traceback.format_exc")
+    def test_app_exception_handler_raises_error(
+        self, mock_format_exc: MagicMock, mock_st_error: MagicMock
+    ):
         """
         GIVEN a function defined with the exception handler decorator
         WHEN this function is called with triggering an exception
@@ -784,9 +743,8 @@ class UtilFunctionsTestCase(unittest.TestCase):
         mock_format_exc.assert_called()
         mock_st_error.assert_called()
 
-    @patch('pathlib.Path.mkdir')
-    def test_create_folder_if_not_exists(self,
-                                         mock_create: MagicMock):
+    @patch("pathlib.Path.mkdir")
+    def test_create_folder_if_not_exists(self, mock_create: MagicMock):
         """
         GIVEN a path to a log folder
         WHEN passed to the 'create_folder_if_not_exists' function
@@ -796,17 +754,19 @@ class UtilFunctionsTestCase(unittest.TestCase):
 
         mock_create.assert_called()
 
-    @patch('tasklit.src.utils.helpers.st.checkbox')
-    @patch('tasklit.src.utils.helpers.st.empty')
-    @patch('tasklit.src.utils.helpers.read_log')
-    @patch('tasklit.src.utils.helpers.terminate_process')
-    @patch('tasklit.src.utils.helpers.launch_command_process')
-    def test_test_command_run(self,
-                              mock_launch_process: MagicMock,
-                              mock_terminate_process: MagicMock,
-                              mock_read_log: MagicMock,
-                              mock_st_empty: MagicMock,
-                              mock_st_checkbox: MagicMock):
+    @patch("tasklit.src.utils.helpers.st.checkbox")
+    @patch("tasklit.src.utils.helpers.st.empty")
+    @patch("tasklit.src.utils.helpers.read_log")
+    @patch("tasklit.src.utils.helpers.terminate_process")
+    @patch("tasklit.src.utils.helpers.launch_command_process")
+    def test_test_command_run(
+        self,
+        mock_launch_process: MagicMock,
+        mock_terminate_process: MagicMock,
+        mock_read_log: MagicMock,
+        mock_st_empty: MagicMock,
+        mock_st_checkbox: MagicMock,
+    ):
         """
         GIVEN a command to test
         WHEN passed to the 'test_command_run' function
@@ -842,7 +802,9 @@ class UtilFunctionsTestCase(unittest.TestCase):
         unit_col.selectbox.return_value = "Minutes"
         quantity_col.slider.return_value = 5
 
-        selected_time, selected_quantity = get_time_interval_info(unit_col, quantity_col)
+        selected_time, selected_quantity = get_time_interval_info(
+            unit_col, quantity_col
+        )
 
         self.assertEqual(selected_time, unit_col.selectbox.return_value)
         self.assertEqual(selected_quantity, quantity_col.slider.return_value)
@@ -856,13 +818,15 @@ class UtilFunctionsTestCase(unittest.TestCase):
         unit_col = MagicMock()
         unit_col.multiselect.return_value = "Tue"
 
-        self.assertEqual(select_weekdays(unit_col), unit_col.multiselect.return_value)
+        self.assertEqual(
+            select_weekdays(unit_col), unit_col.multiselect.return_value
+        )
 
-    @patch('tasklit.src.utils.helpers.select_weekdays')
-    @patch('tasklit.src.utils.helpers.get_time_interval_info')
-    def test_get_execution_interval_information_interval(self,
-                                                         mock_time_info: MagicMock,
-                                                         mock_select: MagicMock):
+    @patch("tasklit.src.utils.helpers.select_weekdays")
+    @patch("tasklit.src.utils.helpers.get_time_interval_info")
+    def test_get_execution_interval_information_interval(
+        self, mock_time_info: MagicMock, mock_select: MagicMock
+    ):
         """
         GIVEN job execution 'Interval' frequency
         WHEN passed to the 'get_execution_interval_information' function
@@ -874,34 +838,23 @@ class UtilFunctionsTestCase(unittest.TestCase):
         mock_time_info.return_value = ("Weekly", 5)
 
         unit, quantity, weekdays = get_execution_interval_information(
-            frequency,
-            unit_col,
-            quantity_col
+            frequency, unit_col, quantity_col
         )
 
         mock_time_info.assert_called_with(unit_col, quantity_col)
         mock_select.assert_not_called()
 
-        self.assertEqual(
-            unit,
-            mock_time_info.return_value[0]
-        )
+        self.assertEqual(unit, mock_time_info.return_value[0])
 
-        self.assertEqual(
-            quantity,
-            mock_time_info.return_value[1]
-        )
+        self.assertEqual(quantity, mock_time_info.return_value[1])
 
-        self.assertEqual(
-            weekdays,
-            None
-        )
+        self.assertEqual(weekdays, None)
 
-    @patch('tasklit.src.utils.helpers.select_weekdays')
-    @patch('tasklit.src.utils.helpers.get_time_interval_info')
-    def test_get_execution_interval_information_daily(self,
-                                                      mock_time_info: MagicMock,
-                                                      mock_select: MagicMock):
+    @patch("tasklit.src.utils.helpers.select_weekdays")
+    @patch("tasklit.src.utils.helpers.get_time_interval_info")
+    def test_get_execution_interval_information_daily(
+        self, mock_time_info: MagicMock, mock_select: MagicMock
+    ):
         """
         GIVEN job execution 'Daily' frequency
         WHEN passed to the 'get_execution_interval_information' function
@@ -913,27 +866,16 @@ class UtilFunctionsTestCase(unittest.TestCase):
         mock_select.return_value = ["Tue"]
 
         unit, quantity, weekdays = get_execution_interval_information(
-            frequency,
-            unit_col,
-            quantity_col
+            frequency, unit_col, quantity_col
         )
         mock_time_info.assert_not_called()
         mock_select.assert_called_with(unit_col)
 
-        self.assertEqual(
-            unit,
-            None
-        )
+        self.assertEqual(unit, None)
 
-        self.assertEqual(
-            quantity,
-            None
-        )
+        self.assertEqual(quantity, None)
 
-        self.assertEqual(
-            weekdays,
-            mock_select.return_value
-        )
+        self.assertEqual(weekdays, mock_select.return_value)
 
     def test_calculate_execution_start(self):
         """
@@ -948,14 +890,14 @@ class UtilFunctionsTestCase(unittest.TestCase):
 
         self.assertEqual(
             calculate_execution_start(date_col, time_slider_col),
-            datetime(2020, 1, 1, 23, 59)
+            datetime(2020, 1, 1, 23, 59),
         )
 
-    @patch('tasklit.src.utils.helpers.st.text')
-    @patch('tasklit.src.utils.helpers.calculate_execution_start')
-    def test_get_command_execution_start_scheduled(self,
-                                                   mock_calculate_start: MagicMock,
-                                                   mock_st_text: MagicMock):
+    @patch("tasklit.src.utils.helpers.st.text")
+    @patch("tasklit.src.utils.helpers.calculate_execution_start")
+    def test_get_command_execution_start_scheduled(
+        self, mock_calculate_start: MagicMock, mock_st_text: MagicMock
+    ):
         """
         GIVEN an execution type with no execution frequency
         WHEN passed to the 'get_command_execution_start' function
@@ -965,31 +907,29 @@ class UtilFunctionsTestCase(unittest.TestCase):
         execution_frequency = ""
         date_col = MagicMock()
         slider_col = MagicMock()
-        result = '2020-01-01 23:59:00'
+        result = "2020-01-01 23:59:00"
         mock_calculate_start.return_value = self.now_datetime
 
-        with patch('tasklit.src.utils.helpers.datetime') as mock_datetime:
+        with patch("tasklit.src.utils.helpers.datetime") as mock_datetime:
             mock_datetime.now.return_value = result
-            mock_datetime.strftime.return_value = '2020-01-01 00:00:00'
+            mock_datetime.strftime.return_value = "2020-01-01 00:00:00"
 
             start_date = get_command_execution_start(
-                execution_type,
-                execution_frequency,
-                [],
-                date_col,
-                slider_col
+                execution_type, execution_frequency, [], date_col, slider_col
             )
 
             mock_calculate_start.assert_called_with(date_col, slider_col)
-            mock_st_text.assert_called_with('First execution on 2021-01-01 00:00:00.')
+            mock_st_text.assert_called_with(
+                "First execution on 2021-01-01 00:00:00."
+            )
 
             self.assertEqual(start_date, mock_calculate_start.return_value)
 
-    @patch('tasklit.src.utils.helpers.st.text')
-    @patch('tasklit.src.utils.helpers.calculate_execution_start')
-    def test_get_command_execution_start_daily_frequency(self,
-                                                         mock_calculate_start: MagicMock,
-                                                         mock_st_text: MagicMock):
+    @patch("tasklit.src.utils.helpers.st.text")
+    @patch("tasklit.src.utils.helpers.calculate_execution_start")
+    def test_get_command_execution_start_daily_frequency(
+        self, mock_calculate_start: MagicMock, mock_st_text: MagicMock
+    ):
         """
         GIVEN specific execution type and execution frequency
         WHEN passed to the 'get_command_execution_start' function
@@ -1003,9 +943,9 @@ class UtilFunctionsTestCase(unittest.TestCase):
         slider_col = MagicMock()
         mock_calculate_start.return_value = self.now_datetime
 
-        with patch('tasklit.src.utils.helpers.datetime') as mock_datetime:
+        with patch("tasklit.src.utils.helpers.datetime") as mock_datetime:
             mock_datetime.now.return_value = self.now_datetime
-            mock_datetime.strftime.return_value = '2020-01-01 00:00:00'
+            mock_datetime.strftime.return_value = "2020-01-01 00:00:00"
             mock_datetime.weekday.return_value = 1
 
             start_date = get_command_execution_start(
@@ -1013,7 +953,7 @@ class UtilFunctionsTestCase(unittest.TestCase):
                 execution_frequency,
                 weekdays,
                 date_col,
-                slider_col
+                slider_col,
             )
 
             self.assertEqual(start_date, datetime(2021, 1, 5, 0, 0))
@@ -1042,11 +982,11 @@ class UtilFunctionsTestCase(unittest.TestCase):
 
         self.assertEqual(match_duration(now, start, duration), True)
 
-    @patch('tasklit.src.utils.helpers.write_job_execution_log')
-    @patch('tasklit.src.utils.helpers.launch_command_process')
-    def test_execute_job(self,
-                         mock_launch_process: MagicMock,
-                         mock_write_log: MagicMock):
+    @patch("tasklit.src.utils.helpers.write_job_execution_log")
+    @patch("tasklit.src.utils.helpers.launch_command_process")
+    def test_execute_job(
+        self, mock_launch_process: MagicMock, mock_write_log: MagicMock
+    ):
         """
         GIVEN parameters for executing a job
         WHEN passed to the 'execute_job' function
@@ -1062,24 +1002,25 @@ class UtilFunctionsTestCase(unittest.TestCase):
         )
 
         mock_launch_process.assert_called_with(
-            self.test_command,
-            self.stdout_log_filepath
+            self.test_command, self.stdout_log_filepath
         )
         mock_launch_process.return_value.wait.assert_called()
         mock_write_log.assert_called_with(
             self.test_job_name,
             self.test_command,
             self.now_datetime,
-            'Executed'
+            "Executed",
         )
 
-    @patch('tasklit.src.utils.helpers.time.sleep')
-    @patch('tasklit.src.utils.helpers.process_should_execute')
-    @patch('tasklit.src.utils.helpers.execute_job')
-    def test_schedule_process_job_once(self,
-                                       mock_execute: MagicMock,
-                                       mock_should_execute: MagicMock,
-                                       mock_sleep: MagicMock):
+    @patch("tasklit.src.utils.helpers.time.sleep")
+    @patch("tasklit.src.utils.helpers.process_should_execute")
+    @patch("tasklit.src.utils.helpers.execute_job")
+    def test_schedule_process_job_once(
+        self,
+        mock_execute: MagicMock,
+        mock_should_execute: MagicMock,
+        mock_sleep: MagicMock,
+    ):
         """
         GIVEN parameters for launching a scheduler process
         WHEN passed to the 'schedule_process_job' function
@@ -1089,7 +1030,7 @@ class UtilFunctionsTestCase(unittest.TestCase):
         execution_frequency = "Once"
         execution_type = ""
 
-        with patch('tasklit.src.utils.helpers.datetime') as mock_datetime:
+        with patch("tasklit.src.utils.helpers.datetime") as mock_datetime:
             mock_datetime.now.return_value = self.now_datetime
 
             schedule_process_job(
@@ -1099,14 +1040,14 @@ class UtilFunctionsTestCase(unittest.TestCase):
                 timedelta(days=1),
                 None,
                 execution_frequency,
-                execution_type
+                execution_type,
             )
 
             mock_execute.assert_called_with(
                 self.test_command,
                 self.stdout_log_filepath,
                 self.test_job_name,
-                self.now_datetime
+                self.now_datetime,
             )
             mock_should_execute.assert_not_called()
             mock_sleep.assert_not_called()
@@ -1118,12 +1059,7 @@ class UtilFunctionsTestCase(unittest.TestCase):
         THEN check that appropriate waiting time interval is returned.
         """
         self.assertEqual(
-            get_interval_duration(
-                "Days",
-                1,
-                ["Tue"]
-            ),
-            timedelta(days=1)
+            get_interval_duration("Days", 1, ["Tue"]), timedelta(days=1)
         )
 
     def test_get_interval_duration_raises_error(self):
@@ -1134,12 +1070,7 @@ class UtilFunctionsTestCase(unittest.TestCase):
         """
         with self.assertRaises(KeyError):
             self.assertEqual(
-                get_interval_duration(
-                    "Weekly",
-                    1,
-                    []
-                ),
-                timedelta(days=1)
+                get_interval_duration("Weekly", 1, []), timedelta(days=1)
             )
 
     def test_get_interval_duration_time_unit(self):
@@ -1150,21 +1081,20 @@ class UtilFunctionsTestCase(unittest.TestCase):
             provided time unit and quantity.
         """
         self.assertEqual(
-            get_interval_duration(
-                "Weeks",
-                1,
-                []
-            ),
-            timedelta(days=7)
+            get_interval_duration("Weeks", 1, []), timedelta(days=7)
         )
 
-    @patch('tasklit.src.utils.helpers.time.sleep', side_effect=InterruptedError)
-    @patch('tasklit.src.utils.helpers.process_should_execute')
-    @patch('tasklit.src.utils.helpers.execute_job')
-    def test_schedule_process_job_sleep(self,
-                                        mock_execute: MagicMock,
-                                        mock_should_execute: MagicMock,
-                                        mock_sleep: MagicMock):
+    @patch(
+        "tasklit.src.utils.helpers.time.sleep", side_effect=InterruptedError
+    )
+    @patch("tasklit.src.utils.helpers.process_should_execute")
+    @patch("tasklit.src.utils.helpers.execute_job")
+    def test_schedule_process_job_sleep(
+        self,
+        mock_execute: MagicMock,
+        mock_should_execute: MagicMock,
+        mock_sleep: MagicMock,
+    ):
         """
         GIVEN parameters for launching a scheduler process
         WHEN passed to the 'schedule_process_job' function
@@ -1175,7 +1105,7 @@ class UtilFunctionsTestCase(unittest.TestCase):
         execution_type = "Now"
         mock_should_execute.return_value = False
 
-        with patch('tasklit.src.utils.helpers.datetime') as mock_datetime:
+        with patch("tasklit.src.utils.helpers.datetime") as mock_datetime:
             mock_datetime.now.return_value = self.now_datetime
 
             with self.assertRaises(InterruptedError):
@@ -1187,16 +1117,20 @@ class UtilFunctionsTestCase(unittest.TestCase):
                     timedelta(days=1),
                     None,
                     execution_frequency,
-                    execution_type
+                    execution_type,
                 )
 
-    @patch('tasklit.src.utils.helpers.time.sleep')
-    @patch('tasklit.src.utils.helpers.process_should_execute')
-    @patch('tasklit.src.utils.helpers.execute_job', side_effect=InterruptedError)
-    def test_schedule_process_job_execute(self,
-                                          mock_execute: MagicMock,
-                                          mock_should_execute: MagicMock,
-                                          mock_sleep: MagicMock):
+    @patch("tasklit.src.utils.helpers.time.sleep")
+    @patch("tasklit.src.utils.helpers.process_should_execute")
+    @patch(
+        "tasklit.src.utils.helpers.execute_job", side_effect=InterruptedError
+    )
+    def test_schedule_process_job_execute(
+        self,
+        mock_execute: MagicMock,
+        mock_should_execute: MagicMock,
+        mock_sleep: MagicMock,
+    ):
         """
         GIVEN parameters for launching a scheduler process
         WHEN passed to the 'schedule_process_job' function
@@ -1206,7 +1140,7 @@ class UtilFunctionsTestCase(unittest.TestCase):
         execution_type = "Now"
         mock_should_execute.return_value = True
 
-        with patch('tasklit.src.utils.helpers.datetime') as mock_datetime:
+        with patch("tasklit.src.utils.helpers.datetime") as mock_datetime:
             mock_datetime.now.return_value = self.now_datetime
 
             with self.assertRaises(InterruptedError):
@@ -1218,14 +1152,10 @@ class UtilFunctionsTestCase(unittest.TestCase):
                     timedelta(days=1),
                     None,
                     execution_frequency,
-                    execution_type
+                    execution_type,
                 )
 
-    @patch('tasklit.src.utils.job_names.random.choice')
-    def test_get_job_name(self,
-                          mock_choice: MagicMock):
+    @patch("tasklit.src.utils.job_names.random.choice")
+    def test_get_job_name(self, mock_choice: MagicMock):
         mock_choice.side_effect = ["jolly", "strauss"]
-        self.assertEqual(
-            get_job_name(),
-            "jolly_strauss"
-        )
+        self.assertEqual(get_job_name(), "jolly_strauss")

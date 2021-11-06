@@ -671,21 +671,6 @@ def update_process_status_info(df: pd.DataFrame) -> None:
     )
 
 
-def get_process_df(sql_engine: engine) -> pd.DataFrame:
-    """Check for and initialize process info dataframe has already been created.
-
-    Returns:
-        either an existing process dataframe or an empty one,
-            following the settings format.
-    """
-    try:
-        df = pd.read_sql_table("processes", con=sql_engine)
-    except OperationalError as exc:
-        raise exc
-
-    return df
-
-
 def update_df_process_last_update_info(df: pd.DataFrame) -> None:
     """Update process 'last update' information.
 
