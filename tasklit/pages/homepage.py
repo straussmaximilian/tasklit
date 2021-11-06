@@ -5,6 +5,7 @@ import streamlit as st
 
 import tasklit.src.utils.helpers as helper_functions
 from tasklit.pages.layouts.footer import footer
+from tasklit.pages.layouts.header import header
 from tasklit.pages.layouts.homepage_explore_task import (
     layout_homepage_explore_task,
 )
@@ -18,11 +19,10 @@ from tasklit.src.classes.data_repository import DataRepository
 @helper_functions.app_exception_handler
 def homepage() -> None:
     """UI logic to display application homepage."""
-    # Set app headers
-    st.write("# 🕙 Tasklit")
-    st.text(
+    header(
+        "# 🕙 Tasklit",
         f"A browser-based task scheduling system. "
-        f"Running on {socket.gethostname()}."
+        f"Running on {socket.gethostname()}.",
     )
 
     # Prepare and display process dataframe

@@ -4,11 +4,13 @@ import os
 import time
 import traceback
 from datetime import datetime, timedelta
+from functools import reduce
 from multiprocessing import Process
 from pathlib import Path
 from subprocess import Popen
 from typing import Callable, List, Optional, Tuple
 
+import numpy as np
 import pandas as pd
 import psutil
 import streamlit as st
@@ -45,9 +47,7 @@ def app_exception_handler(func: Callable) -> Callable:
 
 
 def launch_command_process(command: str, log_filepath: str) -> Popen:
-    """
-    Start a subprocess for a given command and save
-    'stdout' and 'stderr' logs to a respective log file.
+    """Start a subprocess for a given command and save logs.
 
     Args:
         command: command to be executed.
@@ -67,9 +67,7 @@ def launch_command_process(command: str, log_filepath: str) -> Popen:
 
 
 def terminate_child_processes(parent_process: psutil.Process) -> None:
-    """
-    Check for any child processes spawned by the parent process and
-    - if found - terminate them.
+    """Check for - and terminate - any child processes spawned by the parent.
 
     Args:
         parent_process: parent process object.
@@ -86,9 +84,7 @@ def terminate_child_processes(parent_process: psutil.Process) -> None:
 
 
 def terminate_process(pid: int) -> None:
-    """
-    Terminate a running process and any child processes that
-    have been spawned by it.
+    """Terminate a running process (incl. children).
 
     Raises:
         psutil.NoSuchProcess if related process cannot be found.
@@ -103,8 +99,7 @@ def terminate_process(pid: int) -> None:
 
 
 def create_folder_if_not_exists(folder_name: str) -> None:
-    """
-    Check if a folder exists and create one if not.
+    """Check if a folder exists and create one if not.
 
     Args:
         folder_name: name of the folder to be checked.
@@ -113,8 +108,7 @@ def create_folder_if_not_exists(folder_name: str) -> None:
 
 
 def display_process_log_file(log_filename: str) -> str:
-    """
-    Display process log file in as Streamlit code output.
+    """Display process log file in as Streamlit code output.
 
     Args:
         log_filename: string with log filename.
@@ -129,10 +123,10 @@ def display_process_log_file(log_filename: str) -> str:
 
 
 def test_command_run(command: str) -> None:
-    """
-    Utility function to test command execution. Open a subprocess with
-    the given command and log output to the default log file.
-    The log file will be read and displayed via Streamlit.
+    """Test command execution.
+
+    Open a subprocess with the given command and
+    log output to the default log file.
 
     Args:
         command: command to be executed by the process.
@@ -156,8 +150,7 @@ def test_command_run(command: str) -> None:
 def get_time_interval_info(
     unit_col: DeltaGenerator, slider_col: DeltaGenerator
 ) -> Tuple[Optional[str], Optional[int]]:
-    """
-    Get execution frequency information from UI inputs.
+    """Get execution frequency information from UI inputs.
 
     Args:
         unit_col: Streamlit column with UI element to select the corresponding
@@ -181,8 +174,7 @@ def get_time_interval_info(
 
 
 def select_weekdays(unit_col: DeltaGenerator) -> Optional[List[str]]:
-    """
-    Select weekdays on which the process must be executed.
+    """Select weekdays on which the process must be executed.
 
     Args:
         unit_col: Streamlit column with UI multi-select element
@@ -203,9 +195,7 @@ def get_execution_interval_information(
     unit_col: DeltaGenerator,
     slider_col: DeltaGenerator,
 ) -> Tuple[Optional[str], Optional[int], Optional[List[str]]]:
-    """
-    Get command execution interval information, including time interval (e.g. hours, weeks, etc.),
-    related quantity and execution weekdays.
+    """Get command execution interval information.
 
     Args:
         execution_frequency: string indicating execution frequency.
@@ -233,12 +223,13 @@ def get_execution_interval_information(
 def calculate_execution_start(
     date_input_col: DeltaGenerator, time_slider_col: DeltaGenerator
 ) -> datetime:
-    """
-    Calculate the start datetime of command execution.
+    """Calculate the start datetime of command execution.
 
     Args:
-        date_input_col: Streamlit column with UI element to select execution date.
-        time_slider_col:  Streamlit column with UI (slider) element to select hr:min of execution.
+        date_input_col: Streamlit column with UI element
+            to select execution date.
+        time_slider_col:  Streamlit column with UI (slider) element
+            to select hr:min of execution.
 
     Returns:
         datetime object with the start date & time of execution.
@@ -267,15 +258,15 @@ def get_command_execution_start(
     date_col: DeltaGenerator,
     slider_col: DeltaGenerator,
 ) -> datetime:
-    """
-    Get the start datetime of command execution.
+    """Get the start datetime of command execution.
 
     Args:
-        execution_type: type of execution schedule: is execution "Scheduled" or not.
+        execution_type: type of execution schedule.
         execution_frequency: frequency of execution: "Interval" / "Daily"
         weekdays: (optional) list with selected weekdays.
         date_col: Streamlit column with UI element to select execution date.
-        slider_col: Streamlit column with UI (slider) element to select hr:min of execution.
+        slider_col: Streamlit column with UI (slider) element
+            to select hr:min of execution.
 
     Returns:
         datetime object with the start date & time of execution.
@@ -295,9 +286,7 @@ def get_command_execution_start(
 
 
 def refresh_app(to_wait: int = 0) -> None:
-    """
-    (Optionally) wait for a given amount of time (in seconds)
-    and trigger Streamlit app refresh.
+    """(Optionally) wait (in seconds) and trigger Streamlit app refresh.
 
     Args:
         to_wait: integer indicating amount of seconds to wait.
@@ -316,13 +305,12 @@ def refresh_app(to_wait: int = 0) -> None:
 
 
 def match_weekday(now: datetime, weekdays: Optional[List[str]]) -> bool:
-    """
-    Determine if 'today' is the day when a function must be executed.
+    """Determine if 'today' is the day when a function must be executed.
 
     Args:
         now: datetime object representing current timestamp.
-        weekdays: optional list of ints from 0 to 6 corresponding to different days of the week,
-            e.g. 0 for Monday, etc.
+        weekdays: optional list of ints from 0 to 6 corresponding to
+            different days of the week, e.g. 0 for Monday, etc.
 
     Returns:
         True/False based on the result of the check.
@@ -341,9 +329,7 @@ def match_weekday(now: datetime, weekdays: Optional[List[str]]) -> bool:
 def match_duration(
     now: datetime, start: datetime, duration: timedelta
 ) -> bool:
-    """
-    Check whether the sum of process start date and interval timedelta is less
-    than current datetime. If yes -> process must be executed.
+    """Check if process execution interval has passed.
 
     Args:
         now: datetime.now().
@@ -362,8 +348,9 @@ def process_should_execute(
     duration: timedelta,
     weekdays: Optional[List[str]],
 ) -> bool:
-    """
-    Determine whether the process should execute or not:
+    """Determine whether the process should execute or not.
+
+    Decision based on:
         -> is it the correct day of the week?
         -> is it the correct scheduled interval?
 
@@ -384,8 +371,7 @@ def process_should_execute(
 def write_job_execution_log(
     job_name: str, command: str, now: datetime, msg: str
 ) -> None:
-    """
-    Save job execution information to a log file.
+    """Save job execution information to a log file.
 
     Args:
         job_name: name of the job for which to write the log.
@@ -414,15 +400,16 @@ def write_job_execution_log(
 def execute_job(
     command: str, log_filepath: str, job_name: str, now: datetime
 ) -> None:
-    """
-    Interface for running a job:
+    """Interface for running a job.
+
+    Run steps:
         -> launch a process
         -> wait for the process to finish
         -> write job execution log.
 
     Args:
         command: command to be executed.
-        log_filepath:
+        log_filepath: path to the log file.
         job_name: name generated for the job.
         now: datetime.now()
     """
@@ -436,8 +423,7 @@ def get_interval_duration(
     time_unit_quantity: Optional[int],
     weekdays: Optional[List[str]],
 ) -> timedelta:
-    """
-    Get the waiting interval to wait for until the next job execution.
+    """Get the waiting interval to wait for until the next job execution.
 
     Args:
         time_unit: (optional) unit of execution time interval, e.g. 'hours', 'days', etc.
@@ -466,9 +452,7 @@ def schedule_process_job(
     execution_frequency: str,
     execution_type: str,
 ) -> None:
-    """
-    Launch a scheduler process that spawns job execution processes if launch conditions are met.
-    Checks for current date. If date criterion is met -> start the process with command execution.
+    """Launch the main process that handles job execution.
 
     Args:
         command: command to be executed.
@@ -485,8 +469,9 @@ def schedule_process_job(
         execute_job(command, stdout_log_file, job_name, datetime.now())
         return
 
-    # If process must be executed now, decrease start date by interval timedelta:
-    # this way 'match_duration' will return True in the 'process_should_execute' check.
+    # If process must be executed now, decrease start date
+    # by interval timedelta: this way 'match_duration' will return True
+    # in the 'process_should_execute' check.
     if execution_type == "Now":
         start -= interval_duration
 
@@ -502,8 +487,9 @@ def schedule_process_job(
 def create_process_info_dataframe(
     command: str, job_name: str, pid: int, task_id: int
 ) -> pd.DataFrame:
-    """
-    Generate a dataframe with process information in the following format:
+    """Generate a dataframe with process information.
+
+    Format:
 
     {
         'task_id': [],
@@ -539,24 +525,6 @@ def create_process_info_dataframe(
     )
 
 
-# TODO: remove this function and respective unittest
-def save_df_to_sql(df: pd.DataFrame, sql_engine: engine) -> None:
-    """
-    Save dataframe with process information to a local sql alchemy DB file.
-
-    Args:
-        df: process information df.
-        sql_engine: sql alchemy engine to use.
-
-    Raises:
-        OperationalError: if any sqlalchemy errors have been thrown.
-    """
-    try:
-        df.to_sql("processes", con=sql_engine, if_exists="append", index=False)
-    except OperationalError as exc:
-        raise exc
-
-
 def start_scheduler_process(
     command: str,
     job_name: str,
@@ -566,17 +534,17 @@ def start_scheduler_process(
     execution_frequency: str,
     execution_type: str,
 ) -> int:
-    """
-    Run a process with the selected parameters.
+    """Run a process with the selected parameters.
 
     Args:
         command: command to be executed.
         job_name: name allocated for the process job.
         start: execution datetime.
-        interval_duration: interval to wait before scheduling the next job execution.
+        interval_duration: interval to wait before scheduling
+            the next job execution.
         weekdays: (optional) list with selected weekdays.
         execution_frequency: frequency of execution: "Interval" / "Daily"
-        execution_type: type of execution schedule: is execution "Scheduled" or not.
+        execution_type: type of execution schedule.
 
     Returns:
         ID of the started process.
@@ -609,17 +577,17 @@ def submit_job(
     execution_type: str,
     task_id: int,
 ) -> None:
-    """
-    Run a process job and save related process information to an SQL alchemy file.
+    """Run a process job and save related process information.
 
     Args:
         command: command executed by the process.
         job_name: job name allocated for the process.
         start: start date of the job.
-        interval_duration: interval to wait before scheduling the next job execution.
+        interval_duration: interval to wait before scheduling
+            the next job execution.
         weekdays: (optional) list with selected weekdays.
         execution_frequency: frequency of execution: "Interval" / "Daily"
-        execution_type: type of execution schedule: is execution "Scheduled" or not.
+        execution_type: type of execution schedule.
         task_id: task ID.
     """
     started_process_id = start_scheduler_process(
@@ -640,8 +608,7 @@ def submit_job(
 
 
 def read_log(filename: str) -> List[str]:
-    """
-    Utility function to read a logfile.
+    """Utility function to read a logfile.
 
     Args:
         filename: name of the log file to be read.
@@ -660,8 +627,9 @@ def read_log(filename: str) -> List[str]:
 
 
 def get_task_id(df: pd.DataFrame) -> int:
-    """
-    Generate an ID for a new task:
+    """Generate an ID for a new task.
+
+    Steps:
         -> check for the last used ID
         -> increment by 1
 
@@ -675,9 +643,7 @@ def get_task_id(df: pd.DataFrame) -> int:
 
 
 def check_last_process_info_update(job_name: str) -> Optional[datetime]:
-    """
-    Use 'last modified' timestamp of the job log file to check
-    when job and related process information has been updated last.
+    """Check when job and related process information has been updated last.
 
     Args:
         job_name: name of the job for which to perform the check.
@@ -694,9 +660,7 @@ def check_last_process_info_update(job_name: str) -> Optional[datetime]:
 
 
 def update_process_status_info(df: pd.DataFrame) -> None:
-    """
-    If process dataframe already exists, filter out dead and 'zombie' processes to only
-    show accurate process information.
+    """Update process DF to show accurate process status information.
 
     Args:
         df: df with process information.
@@ -708,8 +672,7 @@ def update_process_status_info(df: pd.DataFrame) -> None:
 
 
 def get_process_df(sql_engine: engine) -> pd.DataFrame:
-    """
-    Check for and initialize process info dataframe has already been created.
+    """Check for and initialize process info dataframe has already been created.
 
     Returns:
         either an existing process dataframe or an empty one,
@@ -732,3 +695,24 @@ def update_df_process_last_update_info(df: pd.DataFrame) -> None:
     df["last update"] = df["job name"].apply(
         lambda x: check_last_process_info_update(x) if x else ""
     )
+
+
+def calculate_total_task_duration(
+    duration_vals: np.ndarray, execution_vals: np.ndarray
+) -> float:
+    """Calculate total duration of tasks across all executions.
+
+    Args:
+        duration_vals (np.ndarray): array of task duration values.
+        execution_vals (np.ndarray): array of task execution values.
+
+    Returns:
+        rounded total duration value in minutes.
+    """
+    total_duration = reduce(
+        lambda t, tup: t + tup[0] * tup[1],
+        zip(duration_vals, execution_vals),
+        0,
+    )
+
+    return round(total_duration / 60, 2)
