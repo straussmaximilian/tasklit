@@ -39,7 +39,7 @@ def homepage() -> None:
         if st.button("Remove processes that are not running."):
             running = process_df[process_df["running"]]
             app_db_handler.save_dataframe(
-                running, app_db_handler.process_table_name, if_exists="replace"
+                running, DataRepository.process_table_name, if_exists="replace"
             )
 
             helper_functions.refresh_app()
