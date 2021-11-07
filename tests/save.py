@@ -38,28 +38,3 @@
 #     )
 #     with self.assertRaises(OperationalError):
 #         get_process_df("sql_engine")
-
-# @patch("tasklit.src.utils.helpers.pd.DataFrame")
-# def test_save_df_to_sql(self, mock_df: MagicMock):
-#     """
-#     GIVEN a mocked pd.Dataframe object
-#     WHEN passed to the 'save_df_to_sql' function
-#     THEN check that df.to_sql method is called with correct parameters.
-#     """
-#     save_df_to_sql(mock_df, "engine")
-#     mock_df.to_sql.assert_called_with(
-#         "processes", con="engine", if_exists="append", index=False
-#     )
-#
-# @patch("tasklit.src.utils.helpers.pd.DataFrame")
-# def test_save_df_to_sql_raises_error(self, mock_df: MagicMock):
-#     """
-#     GIVEN a mocked pd.Dataframe object
-#     WHEN passed to the 'save_df_to_sql' function
-#     THEN check that an error is raised if sql file creation fails.
-#     """
-#     mock_df.to_sql.side_effect = OperationalError(
-#         "Failed to create the sql file.", {}, ""
-#     )
-#     with self.assertRaises(OperationalError):
-#         save_df_to_sql(mock_df, "engine")
