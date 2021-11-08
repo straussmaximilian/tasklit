@@ -72,12 +72,20 @@ class TaskStatisticsTracker:
         )
 
     def _get_idx_row_to_update(self) -> np.int64:
+        """Get index of the dataframe row that must be updated.
+
+        Returns:
+            row index value.
+
+        Raises:
+            IndexError: in case there are no rows in the dataframe.
+        """
         try:
             return self._stats_df[
                 self._stats_df["task_name"] == self._task_info.task_name
             ].index[0]
-        except ValueError:
-            raise ValueError("Failed to find a task to update.")
+        except IndexError:
+            raise IndexError("Failed to find a task to update.")
 
     def _update_existing_task(self) -> None:
         """Update stat information of an existing task.
