@@ -1,3 +1,5 @@
+"""Test applciation helper methods."""
+
 import os
 import unittest
 from datetime import datetime, timedelta
@@ -12,6 +14,7 @@ from tasklit.settings.consts import DEFAULT_LOG_DIR_OUT, WEEK_DAYS
 from tasklit.src.utils.helpers import (
     app_exception_handler,
     calculate_execution_start,
+    calculate_total_task_duration,
     check_last_process_info_update,
     create_folder_if_not_exists,
     create_process_info_dataframe,
@@ -48,13 +51,12 @@ else:
 
 
 class UtilFunctionsTestCase(unittest.TestCase):
-    """
-    Unittests for application utility functions.
-    """
+    """Unittests for application utility functions."""
 
     @classmethod
     def setUpClass(cls) -> None:
-        """
+        """Test class parameters.
+
         test_log_filename: str
             Sample log filename.
         log_readlines_output: List[str]
@@ -102,12 +104,14 @@ class UtilFunctionsTestCase(unittest.TestCase):
     @staticmethod
     @app_exception_handler
     def decorated_test_func(should_raise=False):
+        """Test function for testing app exception handler."""
         if should_raise:
             raise ValueError("Exception was raised.")
         return None
 
     def test_get_task_id(self):
-        """
+        """Unittest for get_task_id().
+
         GIVEN a dataframe with process information and related task IDs
         WHEN passed to the 'get_task_id' function
         THEN check that returned ID == the largest ID in column + 1.
@@ -116,7 +120,8 @@ class UtilFunctionsTestCase(unittest.TestCase):
 
     @patch("os.path.getmtime")
     def test_check_last_process_info_update(self, mock_getmtime: MagicMock):
-        """
+        """Unittest for check_last_process_info_update().
+
         GIVEN a job name that corresponds to a job log file
         WHEN passed to the 'check_last_process_info_update' function
         THEN check that correct edit timestamp is identified.
@@ -137,7 +142,8 @@ class UtilFunctionsTestCase(unittest.TestCase):
     def test_check_last_process_info_update_raises_error(
         self, mock_getmtime: MagicMock
     ):
-        """
+        """Unittest for check_last_process_info_update().
+
         GIVEN a job name that corresponds to a missing job log file
         WHEN passed to the 'check_last_process_info_update' function
         THEN check that OS Error is raised and the function returns None.
@@ -148,7 +154,8 @@ class UtilFunctionsTestCase(unittest.TestCase):
         )
 
     def test_read_log_file_exists(self):
-        """
+        """Unittest for read_log().
+
         GIVEN a path to an existing log file
         WHEN passed to the 'read_log' function
         THEN check that correct read output is returned.
@@ -164,7 +171,8 @@ class UtilFunctionsTestCase(unittest.TestCase):
             )
 
     def test_read_log_raises_error(self):
-        """
+        """Unittest for read_log().
+
         GIVEN a path to a missing lof file
         WHEN passed to the 'read_log' function
         THEN check that FileNotFoundError is raised.
@@ -180,7 +188,8 @@ class UtilFunctionsTestCase(unittest.TestCase):
     def test_terminate_child_processes_processes_found(
         self, mock_wait_procs: MagicMock
     ):
-        """
+        """Unittest for terminate_child_processes().
+
         GIVEN a parent process object that has spawned child processes
         WHEN passed to the 'terminate_child_processes' function
         THEN check that related process termination methods are called.
@@ -225,7 +234,8 @@ class UtilFunctionsTestCase(unittest.TestCase):
     def test_terminate_child_processes_processes_not_found(
         self, mock_wait_procs: MagicMock
     ):
-        """
+        """Unittest for terminate_child_processes().
+
         GIVEN a parent process object that has NOT spawned child processes
         WHEN passed to the 'terminate_child_processes' function
         THEN check that related process termination methods are NOT called.
@@ -260,7 +270,8 @@ class UtilFunctionsTestCase(unittest.TestCase):
     def test_terminate_process_with_child_processes(
         self, mock_terminate_child_procs: MagicMock
     ):
-        """
+        """Unittest for terminate_process().
+
         GIVEN an ID of an existing process
         WHEN passed to the 'terminate_process' function
         THEN check that related process termination methods have been called.
@@ -287,7 +298,8 @@ class UtilFunctionsTestCase(unittest.TestCase):
             mock_kill.assert_called()
 
     def test_terminate_process_raises_error(self):
-        """
+        """Unittest for terminate_process().
+
         GIVEN an ID of a test process that does not exist
         WHEN passed to the 'terminate_process' function
         THEN check that psutil.NoSuchProcess error is raised.
@@ -302,10 +314,12 @@ class UtilFunctionsTestCase(unittest.TestCase):
                 terminate_process(self.test_process_id)
 
     def test_match_weekday_day_matched(self):
-        """
-        GIVEN a number corresponding to a day of the week and a list of select weekdays
+        """Unittest for match_weekday().
+
+        GIVEN a number corresponding to a day of the week and a list of weekdays
         WHEN passed to the 'function_should_execute' function
-        THEN check that correct decision is made to execute a function if the days are mapped.
+        THEN check that correct decision is made to execute a function if the
+            days are mapped.
         """
         with patch("tasklit.src.utils.helpers.datetime") as mock_datetime:
             for day_number, day in WEEK_DAYS.items():
@@ -316,7 +330,8 @@ class UtilFunctionsTestCase(unittest.TestCase):
                 )
 
     def test_match_weekday_no_weekdays_provided(self):
-        """
+        """Unittest for match_weekday().
+
         GIVEN only a number representing today's date
         WHEN passed to the 'function_should_execute' function
         THEN check that correct decision is made to execute a function.
@@ -325,10 +340,12 @@ class UtilFunctionsTestCase(unittest.TestCase):
             self.assertEqual(match_weekday(mock_datetime.now, []), True)
 
     def test_match_weekday_no_execution(self):
-        """
-        GIVEN a number corresponding to a day of the week and a list of select weekdays
+        """Unittest for match_weekday().
+
+        GIVEN a number corresponding to a day of the week and a list of weekdays
         WHEN passed to the 'function_should_execute' function
-        THEN check that correct decision is made to NOT execute a function if the days cannot be mapped.
+        THEN check that correct decision is made to NOT execute a function if
+            the days cannot be mapped.
         """
         with patch("tasklit.src.utils.helpers.datetime") as mock_datetime:
             for day_number, day in WEEK_DAYS.items():
@@ -338,10 +355,12 @@ class UtilFunctionsTestCase(unittest.TestCase):
                 )
 
     def test_match_weekday_raises_error(self):
-        """
-        GIVEN a number corresponding to a day of the week and a list of select weekdays
+        """Unittest for match_weekday().
+
+        GIVEN a number corresponding to a day of the week and a list of weekdays
         WHEN passed to the 'function_should_execute' function
-        THEN check that an error is raised if the number is missing in the app settings day mapping.
+        THEN check that an error is raised if the number is missing in the app
+            settings day mapping.
         """
         with patch("tasklit.src.utils.helpers.datetime") as mock_datetime:
             for day_number, day in WEEK_DAYS.items():
@@ -368,10 +387,12 @@ class UtilFunctionsTestCase(unittest.TestCase):
         mock_st_empty: MagicMock,
         mock_sleep: MagicMock,
     ):
-        """
+        """Unittest for refresh_app().
+
         GIVEN an optional amount of time to wait in seconds
         WHEN passed to the 'refresh_app' function
-        THEN check that Streamlit methods for writing log output and refreshing the app are called.
+        THEN check that Streamlit methods for writing log output and
+            refreshing the app are called.
         """
         mock_st_empty.write.return_value = True
         mock_rerun_data.return_value = True
@@ -392,7 +413,8 @@ class UtilFunctionsTestCase(unittest.TestCase):
         mock_st_empty: MagicMock,
         mock_sleep: MagicMock,
     ):
-        """
+        """Unittest for refresh_app().
+
         GIVEN no time to wait in seconds
         WHEN passed to the 'refresh_app' function
         THEN check that only Streamlit methods for refreshing the app are called.
@@ -406,7 +428,8 @@ class UtilFunctionsTestCase(unittest.TestCase):
 
     @patch("tasklit.src.utils.helpers.Popen")
     def test_launch_command_process(self, mock_popen: MagicMock):
-        """
+        """Unittest for launch_command_process().
+
         GIVEN a command to execute and a respective job name
         WHEN passed to the 'run_job' function
         THEN check that correct object type is returned.
@@ -425,7 +448,8 @@ class UtilFunctionsTestCase(unittest.TestCase):
 
     @patch("tasklit.src.utils.helpers.Popen")
     def test_launch_command_process_raises_error(self, mock_popen: MagicMock):
-        """
+        """Unittest for launch_command_process().
+
         GIVEN a command to execute and a respective job name
         WHEN passed to the 'run_job' function
         THEN check that an error is raised if log file creation fails.
@@ -439,7 +463,8 @@ class UtilFunctionsTestCase(unittest.TestCase):
 
     @patch("tasklit.src.utils.helpers.read_log")
     def test_display_process_log_file_exists(self, mock_read_log: MagicMock):
-        """
+        """Unittest for display_process_log_file().
+
         GIVEN a name of an existing log file
         WHEN passed to the 'display_process_log_file' function
         THEN check that the file is read and file contents are displayed.
@@ -453,10 +478,12 @@ class UtilFunctionsTestCase(unittest.TestCase):
 
     @patch("tasklit.src.utils.helpers.read_log")
     def test_display_process_log_file_missing(self, mock_read_log: MagicMock):
-        """
+        """Unittest for display_process_log_file().
+
         GIVEN a name of a log file that doesn't exist
         WHEN passed to the 'display_process_log_file' function
-        THEN check that FileNotFoundError is triggered and a warning message is displayed.
+        THEN check that FileNotFoundError is triggered and a warning message
+            is displayed.
         """
         mock_read_log.side_effect = FileNotFoundError("Log file is missing.")
 
@@ -471,7 +498,8 @@ class UtilFunctionsTestCase(unittest.TestCase):
     def test_update_df_process_last_update_info(
         self, mock_check_update: MagicMock
     ):
-        """
+        """Unittest for update_process_status_info().
+
         GIVEN a pandas dataframe with a 'last update' column
         WHEN passed to the 'update_df_process_last_update_info' function
         THEN check that 'last update' column is correctly populated.
@@ -488,7 +516,8 @@ class UtilFunctionsTestCase(unittest.TestCase):
     def test_update_process_status_info_running_process(
         self, mock_pid_exists: MagicMock, mock_process_status: MagicMock
     ):
-        """
+        """Unittest for update_process_status_info().
+
         GIVEN a dataframe with information for an existing running process
         WHEN passed to the 'update_process_status_info' function
         THEN check that process status is correctly identified as 'running'.
@@ -505,7 +534,8 @@ class UtilFunctionsTestCase(unittest.TestCase):
     def test_update_process_status_info_zombie_process(
         self, mock_pid_exists: MagicMock, mock_process_status: MagicMock
     ):
-        """
+        """Unittest for update_process_status_info().
+
         GIVEN a dataframe with information for an existing zombie process
         WHEN passed to the 'update_process_status_info' function
         THEN check that process status is correctly identified as not 'running'.
@@ -521,7 +551,8 @@ class UtilFunctionsTestCase(unittest.TestCase):
     def test_update_process_status_info_missing_process(
         self, mock_pid_exists: MagicMock
     ):
-        """
+        """Unittest for update_process_status_info().
+
         GIVEN a dataframe with information for a process that does not exist
         WHEN passed to the 'update_process_status_info' function
         THEN check that process status is correctly identified as not 'running'.
@@ -541,7 +572,8 @@ class UtilFunctionsTestCase(unittest.TestCase):
         mock_create_df: MagicMock,
         mock_save_df: MagicMock,
     ):
-        """
+        """Unittest for submit_job().
+
         GIVEN job execution parameters
         WHEN passed to the 'submit_job' function
         THEN check that job execution functions are called.
@@ -575,7 +607,8 @@ class UtilFunctionsTestCase(unittest.TestCase):
 
     @patch("tasklit.src.utils.helpers.Process")
     def test_start_scheduler_process(self, mock_process: MagicMock):
-        """
+        """Unittest for start_scheduler_process().
+
         GIVEN job execution parameters
         WHEN passed to the 'start_process' function
         THEN check that a scheduler process is started and related process ID is returned.
@@ -599,7 +632,8 @@ class UtilFunctionsTestCase(unittest.TestCase):
         )
 
     def test_create_process_info_dataframe(self):
-        """
+        """Unittest for create_process_info_dataframe().
+
         GIVEN parameters related to a specific job (e.g. name, command, etc.)
         WHEN passed to the 'create_process_info_dataframe' function
         THEN check that a dataframe with these parameters is returned.
@@ -616,7 +650,8 @@ class UtilFunctionsTestCase(unittest.TestCase):
             )
 
     def test_write_job_execution_log(self):
-        """
+        """Unittest for write_job_execution_log().
+
         GIVEN job info that should be logged (e.g. job name, command, etc.)
         WHEN passed to the 'write_job_execution_log' function
         THEN check that correct log file information is logged.
@@ -649,7 +684,8 @@ class UtilFunctionsTestCase(unittest.TestCase):
                 mock_file.assert_called_with(self.stdout_log_filepath, "a")
 
     def test_write_job_execution_log_raises_error(self):
-        """
+        """Unittest for write_job_execution_log().
+
         GIVEN job info that should be logged (e.g. job name, command, etc.)
         WHEN passed to the 'write_job_execution_log' function
         THEN check that an error is raised if the log file cannot be accessed.
@@ -673,7 +709,8 @@ class UtilFunctionsTestCase(unittest.TestCase):
     def test_process_should_execute(
         self, mock_match_weekday: MagicMock, mock_match_duration: MagicMock
     ):
-        """
+        """Unittest for process_should_execute().
+
         GIVEN current daytime information
         WHEN passed to the 'test_process_should_execute' function
         THEN check that a decision is made to execute the process if both checks pass.
@@ -693,7 +730,8 @@ class UtilFunctionsTestCase(unittest.TestCase):
     def test_process_should_not_execute(
         self, mock_match_weekday: MagicMock, mock_match_duration: MagicMock
     ):
-        """
+        """Unittest for process_should_execute().
+
         GIVEN current daytime information
         WHEN passed to the 'test_process_should_execute' function
         THEN check that a decision is made to NOT execute the process if
@@ -714,7 +752,8 @@ class UtilFunctionsTestCase(unittest.TestCase):
     def test_app_exception_handler_not_raises_error(
         self, mock_refresh_app: MagicMock, mock_st_error: MagicMock
     ):
-        """
+        """Unittest for app_exception_handler().
+
         GIVEN a function defined with the exception handler decorator
         WHEN this function is called without triggering an exception
         THEN check that decorator exception handling methods are not called.
@@ -732,7 +771,8 @@ class UtilFunctionsTestCase(unittest.TestCase):
     def test_app_exception_handler_raises_error(
         self, mock_format_exc: MagicMock, mock_st_error: MagicMock
     ):
-        """
+        """Unittest for app_exception_handler().
+
         GIVEN a function defined with the exception handler decorator
         WHEN this function is called with triggering an exception
         THEN check that decorator exception handling methods are called.
@@ -744,7 +784,8 @@ class UtilFunctionsTestCase(unittest.TestCase):
 
     @patch("pathlib.Path.mkdir")
     def test_create_folder_if_not_exists(self, mock_create: MagicMock):
-        """
+        """Unittest for create_folder_if_not_exists().
+
         GIVEN a path to a log folder
         WHEN passed to the 'create_folder_if_not_exists' function
         THEN check that related folder creation methods are called.
@@ -766,7 +807,8 @@ class UtilFunctionsTestCase(unittest.TestCase):
         mock_st_empty: MagicMock,
         mock_st_checkbox: MagicMock,
     ):
-        """
+        """Unittest for test_command_run().
+
         GIVEN a command to test
         WHEN passed to the 'test_command_run' function
         THEN check that related test commands are called and
@@ -791,7 +833,8 @@ class UtilFunctionsTestCase(unittest.TestCase):
         )
 
     def test_get_time_interval_info(self):
-        """
+        """Unittest for get_time_interval().
+
         GIVEN mocked Streamlit column widgets
         WHEN passed to the 'get_time_interval_info' function
         THEN check that correct time values are returned.
@@ -809,7 +852,8 @@ class UtilFunctionsTestCase(unittest.TestCase):
         self.assertEqual(selected_quantity, quantity_col.slider.return_value)
 
     def test_select_weekdays(self):
-        """
+        """Unittest for select_weekdays().
+
         GIVEN mocked Streamlit column widget
         WHEN passed to the 'select_weekdays' function
         THEN check that correct day of the week selection is returned.
@@ -826,7 +870,8 @@ class UtilFunctionsTestCase(unittest.TestCase):
     def test_get_execution_interval_information_interval(
         self, mock_time_info: MagicMock, mock_select: MagicMock
     ):
-        """
+        """Unittest for get_execution_interval_information().
+
         GIVEN job execution 'Interval' frequency
         WHEN passed to the 'get_execution_interval_information' function
         THEN check that returned time interval information matches expected values.
@@ -854,7 +899,8 @@ class UtilFunctionsTestCase(unittest.TestCase):
     def test_get_execution_interval_information_daily(
         self, mock_time_info: MagicMock, mock_select: MagicMock
     ):
-        """
+        """Unittest for get_execution_interval_information().
+
         GIVEN job execution 'Daily' frequency
         WHEN passed to the 'get_execution_interval_information' function
         THEN check that returned time interval information matches expected values.
@@ -877,10 +923,12 @@ class UtilFunctionsTestCase(unittest.TestCase):
         self.assertEqual(weekdays, mock_select.return_value)
 
     def test_calculate_execution_start(self):
-        """
+        """Unittest for calculate_execution_start().
+
         GIVEN Streamlit widgets for selecting execution date and time
         WHEN passed to the 'calculate_execution_start' function
-        THEN check that returned execution start datetime matches expected value.
+        THEN check that returned execution start datetime
+            matches expected value.
         """
         date_col = MagicMock()
         date_col.date_input.return_value = datetime(2020, 1, 1, 00, 00)
@@ -897,7 +945,8 @@ class UtilFunctionsTestCase(unittest.TestCase):
     def test_get_command_execution_start_scheduled(
         self, mock_calculate_start: MagicMock, mock_st_text: MagicMock
     ):
-        """
+        """Unittest for get_command_execution_start().
+
         GIVEN an execution type with no execution frequency
         WHEN passed to the 'get_command_execution_start' function
         THEN check that correct execution start value is returned.
@@ -929,7 +978,8 @@ class UtilFunctionsTestCase(unittest.TestCase):
     def test_get_command_execution_start_daily_frequency(
         self, mock_calculate_start: MagicMock, mock_st_text: MagicMock
     ):
-        """
+        """Unittest for get_command_execution_start().
+
         GIVEN specific execution type and execution frequency
         WHEN passed to the 'get_command_execution_start' function
         THEN check correct execution start value is returned.
@@ -958,7 +1008,8 @@ class UtilFunctionsTestCase(unittest.TestCase):
             self.assertEqual(start_date, datetime(2021, 1, 5, 0, 0))
 
     def test_match_duration_unmatched(self):
-        """
+        """Unittest for match_duration().
+
         GIVEN current datetime that does not exceed scheduling parameters
         WHEN passed to the 'match_duration' function
         THEN check decision is made to not execute the job.
@@ -970,7 +1021,8 @@ class UtilFunctionsTestCase(unittest.TestCase):
         self.assertEqual(match_duration(now, start, duration), False)
 
     def test_match_duration_matched(self):
-        """
+        """Unittest for match_duration().
+
         GIVEN current datetime that exceeds scheduling parameters
         WHEN passed to the 'get_command_execution_start' function
         THEN check decision is made to execute the job.
@@ -986,7 +1038,8 @@ class UtilFunctionsTestCase(unittest.TestCase):
     def test_execute_job(
         self, mock_launch_process: MagicMock, mock_write_log: MagicMock
     ):
-        """
+        """Unittest for execute_job().
+
         GIVEN parameters for executing a job
         WHEN passed to the 'execute_job' function
         THEN check that related job execution methods are called.
@@ -1020,7 +1073,8 @@ class UtilFunctionsTestCase(unittest.TestCase):
         mock_should_execute: MagicMock,
         mock_sleep: MagicMock,
     ):
-        """
+        """Unittest for schedule_process_job().
+
         GIVEN parameters for launching a scheduler process
         WHEN passed to the 'schedule_process_job' function
         THEN check that the function correctly decides on whether
@@ -1052,7 +1106,8 @@ class UtilFunctionsTestCase(unittest.TestCase):
             mock_sleep.assert_not_called()
 
     def test_get_interval_duration_weekdays(self):
-        """
+        """Unittest for get_interval_duration().
+
         GIVEN selected weekdays
         WHEN passed to the 'get_interval_duration' function
         THEN check that appropriate waiting time interval is returned.
@@ -1062,7 +1117,8 @@ class UtilFunctionsTestCase(unittest.TestCase):
         )
 
     def test_get_interval_duration_raises_error(self):
-        """
+        """Unittest for get_interval_duration().
+
         GIVEN a time unit that cannot be matched to pre-defined duration
         WHEN passed to the 'get_interval_duration' function
         THEN check that an error is raised.
@@ -1073,7 +1129,8 @@ class UtilFunctionsTestCase(unittest.TestCase):
             )
 
     def test_get_interval_duration_time_unit(self):
-        """
+        """Unittest for get_interval_duration_time_unit().
+
         GIVEN no selected weekdays
         WHEN passed to the 'get_interval_duration' function
         THEN check that returned time interval is calculated based on
@@ -1094,7 +1151,8 @@ class UtilFunctionsTestCase(unittest.TestCase):
         mock_should_execute: MagicMock,
         mock_sleep: MagicMock,
     ):
-        """
+        """Unittest for schedule_schedule_process_job_sleep().
+
         GIVEN parameters for launching a scheduler process
         WHEN passed to the 'schedule_process_job' function
         THEN check that correct decision to wait is taken
@@ -1130,7 +1188,8 @@ class UtilFunctionsTestCase(unittest.TestCase):
         mock_should_execute: MagicMock,
         mock_sleep: MagicMock,
     ):
-        """
+        """Unittest for schedule_process_job_execute().
+
         GIVEN parameters for launching a scheduler process
         WHEN passed to the 'schedule_process_job' function
         THEN check that correct decision is taken to execute the process.
@@ -1156,5 +1215,28 @@ class UtilFunctionsTestCase(unittest.TestCase):
 
     @patch("tasklit.src.utils.job_names.random.choice")
     def test_get_job_name(self, mock_choice: MagicMock):
+        """Unittest for get_job_name().
+
+        WHEN get_job_name() is called
+        THEN check that correct job name is returned.
+        """
         mock_choice.side_effect = ["jolly", "strauss"]
         self.assertEqual(get_job_name(), "jolly_strauss")
+
+    def test_calculate_total_task_duration(self):
+        """Unittest for calculate_total_task_duration().
+
+        GIVEN values for two DF columns - duration and number of executions
+        WHEN calculate_total_task_duration() is called
+        THEN check that correct total duration is calculated.
+        """
+        test_data = [[2.3, 1], [5.6, 15], [21, 14]]
+
+        test_df = pd.DataFrame(test_data, columns=["duration", "executions"])
+
+        self.assertEqual(
+            calculate_total_task_duration(
+                test_df.duration.values, test_df.executions.values
+            ),
+            6.34,
+        )

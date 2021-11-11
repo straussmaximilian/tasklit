@@ -14,8 +14,6 @@ import numpy as np
 import pandas as pd
 import psutil
 import streamlit as st
-from sqlalchemy import engine
-from sqlalchemy.exc import OperationalError
 from streamlit.delta_generator import DeltaGenerator
 
 import tasklit.settings.consts as settings
@@ -695,7 +693,7 @@ def calculate_total_task_duration(
         rounded total duration value in minutes.
     """
     total_duration = reduce(
-        lambda t, tup: t + tup[0] * tup[1],
+        lambda total, duration_tup: total + duration_tup[0] * duration_tup[1],
         zip(duration_vals, execution_vals),
         0,
     )

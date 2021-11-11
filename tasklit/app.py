@@ -14,7 +14,7 @@ for folder in (settings.BASE_DATA_DIR, settings.BASE_LOG_DIR):
 app_db_handler.create_tables_on_init()
 
 # Define selection of pages and render the sidebar
-application_pages = {"Home": homepage, "Job Stats": usage_dashboard}
+application_pages = {"Home": homepage, "Task Stats": usage_dashboard}
 
 st.sidebar.title("Navigation")
 selection = st.sidebar.radio("Navigate to", list(application_pages.keys()))

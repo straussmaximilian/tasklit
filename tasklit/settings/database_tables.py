@@ -12,13 +12,13 @@ class DatabaseTable(ABC):
     @abstractmethod
     def table_name(self) -> str:
         """Return the name of the table."""
-        raise NotImplementedError
+        ...
 
     @property
     @abstractmethod
     def table_format(self) -> Dict[str, list]:
         """Return the format of the table."""
-        raise NotImplementedError
+        ...
 
     @property
     @abstractmethod
@@ -26,7 +26,7 @@ class DatabaseTable(ABC):
         self,
     ) -> Dict[str, Any]:
         """Return SQLAlchemy data types for table columns."""
-        raise NotImplementedError
+        ...
 
     def get_table_metadata(self) -> Dict[str, Any]:
         """Return table metadata.
