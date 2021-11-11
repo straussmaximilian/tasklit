@@ -93,8 +93,8 @@ class TaskObserverTestCase(unittest.TestCase):
             "job1",
         )
 
-    @patch.object(TaskStatisticsTracker, "update_task_stats")
-    def test_extract_task_details(self, mock_update: MagicMock):
+    @patch.object(TaskStatisticsTracker, "_load_stats_df")
+    def test_extract_task_details(self, mock_load: MagicMock):
         """Test TaskObserver.__call__().
 
         GIVEN a decorated callable
@@ -102,7 +102,7 @@ class TaskObserverTestCase(unittest.TestCase):
         THEN check that correct task details
             are extracted by the decorator.
         """
-        mock_update.return_value = True
+        mock_load.return_value = True
 
         self.observer_correct_args.__call__(
             "arg1", "job1", "arg2", "cool_command"
