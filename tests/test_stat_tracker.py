@@ -1,6 +1,7 @@
 """Unittests for TaskStatisticsTracker."""
 
 import unittest
+from dataclasses import asdict
 from unittest.mock import MagicMock, call, patch
 
 import pandas as pd
@@ -17,6 +18,8 @@ class TaskStatisticsTrackerTestCase(unittest.TestCase):
     def setUpClass(cls) -> None:
         """Test class parameters.
 
+        task_df_columns: List[str]
+            task DF columns.
         task: TaskInformation
             sample task information.
         empty_task_dataframe: pd.DataFrame
@@ -27,9 +30,17 @@ class TaskStatisticsTrackerTestCase(unittest.TestCase):
             instantiated task tracker with an empty DF.
         """
         super(TaskStatisticsTrackerTestCase, cls).setUpClass()
+        cls.task_df_columns = [
+            "task_name",
+            "command",
+            "average_duration",
+            "executions",
+        ]
         cls.task = TaskInformation("sample_job", "echo 'Max is awesome!'", 0.1)
-        cls.empty_task_dataframe = pd.DataFrame()
-        cls.non_empty_task_dataframe = pd.DataFrame()
+        cls.empty_task_dataframe = pd.DataFrame(columns=cls.task_df_columns)
+        cls.non_empty_task_dataframe = pd.DataFrame(
+            columns=cls.task_df_columns
+        )
 
         with patch(
             "tasklit.src.classes.stat_tracker.app_db_handler"
@@ -47,7 +58,9 @@ class TaskStatisticsTrackerTestCase(unittest.TestCase):
         WHEN _load_stats_df() method is called
         THEN check that correct dataframe output is returned.
         """
-        assert_frame_equal(self.task_tracker._load_stats_df(), pd.DataFrame())
+        assert_frame_equal(
+            self.task_tracker._load_stats_df(), self.empty_task_dataframe
+        )
 
         self.task_tracker._db_handler.assert_has_calls(
             [
@@ -69,5 +82,42 @@ class TaskStatisticsTrackerTestCase(unittest.TestCase):
             0
         ]
 
-        assert_frame_equal(df_call[0][0], pd.DataFrame())
+        assert_frame_equal(df_call[0][0], self.empty_task_dataframe)
         self.assertEqual(expected_call, (df_call[0][1], df_call[1]))
+
+    def test_task_exists_missing_task(self):
+        """Unittest for TaskStatisticsTracker._task_exists().
+
+        GIVEN task information and an empty task dataframe
+        WHEN _task_exists() method is called
+        THEN check that the task is identified as missing.
+        """
+        self.task_tracker._stats_df = self.empty_task_dataframe
+
+        self.assertEqual(self.task_tracker._task_exists(), False)
+
+    def test_task_exists_existing_task(self):
+        """Unittest for TaskStatisticsTracker._task_exists().
+
+        GIVEN task information and a dataframe with the same task
+        WHEN _task_exists() method is called
+        THEN check that the task is identified as existing.
+        """
+        self.task_tracker._add_new_task()
+
+        self.assertEqual(self.task_tracker._task_exists(), True)
+
+    def test_add_new_task(self):
+        """Unittest for TaskStatisticsTracker._add_new_task().
+
+        GIVEN task information and a task dataframe
+        WHEN _add_new_task() method is called
+        THEN check that a new row has been added to the dataframe.
+        """
+        expected_df = self.empty_task_dataframe.append(
+            asdict(self.task), ignore_index=True
+        )
+
+        self.task_tracker._add_new_task()
+
+        assert_frame_equal(expected_df, self.task_tracker._stats_df)
