@@ -36,7 +36,13 @@ class TaskStatisticsTrackerTestCase(unittest.TestCase):
             "average_duration",
             "executions",
         ]
-        cls.task = TaskInformation("sample_job", "echo 'Max is awesome!'", 0.1)
+        cls.task = TaskInformation("sample_job", "echo 'Max is awesome!'", 1.2)
+        cls.new_task = TaskInformation(
+            "sample_job", "echo 'Max is awesome!'", 2.3
+        )
+        cls.missing_task = TaskInformation(
+            "great_job", "echo 'Max is awesomer!'", 2.3
+        )
         cls.empty_task_dataframe = pd.DataFrame(columns=cls.task_df_columns)
         cls.non_empty_task_dataframe = pd.DataFrame(
             columns=cls.task_df_columns
@@ -121,3 +127,88 @@ class TaskStatisticsTrackerTestCase(unittest.TestCase):
         self.task_tracker._add_new_task()
 
         assert_frame_equal(expected_df, self.task_tracker._stats_df)
+
+    def test_get_idx_row_to_update(self):
+        """Unittest for TaskStatisticsTracker._get_idx_row_to_update().
+
+        GIVEN task information and a task dataframe
+        WHEN _get_idx_row_to_update() method is called
+        THEN check correct row index is returned.
+        """
+        self.assertEqual(self.task_tracker._get_idx_row_to_update(), 0)
+
+    def test_get_idx_row_to_update_raises_error(self):
+        """Unittest for TaskStatisticsTracker._get_idx_row_to_update().
+
+        GIVEN task information and a task dataframe
+        WHEN _get_idx_row_to_update() method is called
+        THEN that correct error is raised in case we failed to find the task.
+        """
+        self.task_tracker._task_info = self.missing_task
+
+        with self.assertRaises(IndexError):
+            self.task_tracker._get_idx_row_to_update()
+
+    def test_update_existing_task(self):
+        """Unittest for TaskStatisticsTracker._update_existing_task().
+
+        GIVEN task information and a task dataframe
+        WHEN _update_existing_task() method is called
+        THEN check existing task information is correctly updated.
+        """
+        self.task_tracker._task_info = self.task
+        self.task_tracker._add_new_task()
+        self.task_tracker._task_info = self.new_task
+
+        self.task_tracker._update_existing_task()
+
+        self.assertEqual(
+            self.task_tracker._stats_df.at[0, "average_duration"], 1.75
+        )
+        self.assertEqual(self.task_tracker._stats_df.at[0, "executions"], 2)
+        self.assertEqual(
+            self.task_tracker._stats_df.at[0, "task_name"],
+            self.new_task.task_name,
+        )
+        self.assertEqual(
+            self.task_tracker._stats_df.at[0, "command"],
+            self.new_task.command,
+        )
+
+    @patch.object(TaskStatisticsTracker, "_add_new_task")
+    @patch.object(TaskStatisticsTracker, "_task_exists")
+    def test_update_task_stats_add_new(
+        self, mock_exists: MagicMock, mock_add: MagicMock
+    ):
+        """Unittest for TaskStatisticsTracker.update_task_stats().
+
+        GIVEN task information and a task dataframe
+        WHEN update_task_stats() method is called
+        THEN check that correct decision is made to add a new task.
+        """
+        mock_exists.return_value = False
+        mock_add.return_value = True
+
+        self.task_tracker.update_task_stats()
+
+        mock_exists.assert_called_once()
+        mock_add.assert_called_once()
+
+    @patch.object(TaskStatisticsTracker, "_save_stats_df")
+    @patch.object(TaskStatisticsTracker, "_task_exists")
+    def test_update_task_stats_add_new(
+        self, mock_exists: MagicMock, mock_save: MagicMock
+    ):
+        """Unittest for TaskStatisticsTracker.update_task_stats().
+
+        GIVEN task information and a task dataframe
+        WHEN update_task_stats() method is called
+        THEN check that correct decision is made to update the task.
+        """
+        mock_exists.return_value = False
+        mock_save.return_value = True
+
+        self.task_tracker.update_task_stats()
+
+        mock_exists.assert_called_once()
+        mock_save.assert_called_once()
