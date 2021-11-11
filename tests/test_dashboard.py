@@ -29,12 +29,14 @@ class DashboardTestCase(unittest.TestCase):
             }
         )
 
+    @patch.object(app_db_handler, "load_dataframe")
     @patch("tasklit.pages.dashboard.footer")
     @patch("tasklit.pages.dashboard.header")
     def test_page_header_footer(
         self,
         mock_header: MagicMock,
         mock_footer: MagicMock,
+        mock_load: MagicMock
     ):
         """Check header and footer rendered.
 
@@ -43,6 +45,7 @@ class DashboardTestCase(unittest.TestCase):
         """
         mock_header.return_value = True
         mock_footer.return_value = True
+        mock_load.return_value = self.test_df
 
         usage_dashboard()
 

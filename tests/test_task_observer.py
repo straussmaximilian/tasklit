@@ -5,7 +5,7 @@ from inspect import signature
 from unittest.mock import MagicMock, patch
 
 from tasklit.src.classes.exceptions import ObserverArgumentsMissing
-from tasklit.src.classes.observers import TaskObserver
+from tasklit.src.classes.observers import TaskObserver, TaskStatisticsTracker
 
 
 class TaskObserverTestCase(unittest.TestCase):
@@ -93,7 +93,8 @@ class TaskObserverTestCase(unittest.TestCase):
             "job1",
         )
 
-    def test_extract_task_details(self):
+    @patch.object(TaskStatisticsTracker, "update_task_stats")
+    def test_extract_task_details(self, mock_update: MagicMock):
         """Test TaskObserver.__call__().
 
         GIVEN a decorated callable
@@ -101,6 +102,8 @@ class TaskObserverTestCase(unittest.TestCase):
         THEN check that correct task details
             are extracted by the decorator.
         """
+        mock_update.return_value = True
+
         self.observer_correct_args.__call__(
             "arg1", "job1", "arg2", "cool_command"
         )
@@ -125,8 +128,9 @@ class TaskObserverTestCase(unittest.TestCase):
             1,
         )
 
+    @patch.object(TaskStatisticsTracker, "_load_stats_df")
     @patch.object(TaskObserver, "_run_task_tracker")
-    def test_tast_tracker_call(self, mock_run: MagicMock):
+    def test_tast_tracker_call(self, mock_run: MagicMock, mock_load: MagicMock):
         """Test TaskObserver._run_task_tracker().
 
         GIVEN a decorated callable
@@ -134,6 +138,7 @@ class TaskObserverTestCase(unittest.TestCase):
         THEN check that the task tracker is called.
         """
         mock_run.return_value = True
+        mock_load.return_value = True
 
         self.observer_correct_args.__call__(
             "arg1", "job1", "arg2", "cool_command"
