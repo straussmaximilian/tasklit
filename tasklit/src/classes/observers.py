@@ -17,7 +17,7 @@ class StatTracker(Protocol):
 
 
 class TaskObserver:
-    """Class responsible for gathering job usage stats.
+    """Class decorator responsible for gathering job usage stats.
 
     Parameters:
     ___________
@@ -72,6 +72,7 @@ class TaskObserver:
 
         Returns:
             function signature object.
+
         Raises:
               ValueError: if accessing function signature fails.
         """
@@ -86,6 +87,7 @@ class TaskObserver:
         Returns:
             Dict[str, int] with key standing for argument name,
                 value for position (starting from 1).
+
         Example:
             Case 1: arguments are present
 

@@ -68,7 +68,6 @@ def usage_dashboard() -> None:
 
     st.markdown("## Task History")
     # Prepare stats DF for display
-    stats_df.reset_index(drop=True, inplace=True)
     st.table(
         stats_df.sort_values(by=["executions"], ascending=False).style.format(
             {"average_duration": "{:.2f}"}
