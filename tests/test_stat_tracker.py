@@ -12,7 +12,7 @@ from tasklit.src.classes.stat_tracker import TaskStatisticsTracker
 
 
 class TaskStatisticsTrackerTestCase(unittest.TestCase):
-    """Unittests for application UI layout elements."""
+    """Test task tracking implementation."""
 
     @classmethod
     def setUpClass(cls) -> None:
@@ -22,6 +22,10 @@ class TaskStatisticsTrackerTestCase(unittest.TestCase):
             task DF columns.
         task: TaskInformation
             sample task information.
+        new_task: TaskInformation
+            new task to be added to the task DF.
+        missing_task: TaskInformation
+            task missing from the task DF.
         empty_task_dataframe: pd.DataFrame
             empty DF to test adding a new task row.
         non_empty_task_dataframe: pd.DataFrame
@@ -196,7 +200,7 @@ class TaskStatisticsTrackerTestCase(unittest.TestCase):
 
     @patch.object(TaskStatisticsTracker, "_save_stats_df")
     @patch.object(TaskStatisticsTracker, "_task_exists")
-    def test_update_task_stats_add_new(
+    def test_update_task_stats_update_task(
         self, mock_exists: MagicMock, mock_save: MagicMock
     ):
         """Unittest for TaskStatisticsTracker.update_task_stats().
