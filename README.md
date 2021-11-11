@@ -1,6 +1,6 @@
 [![codecov](https://codecov.io/gh/straussmaximilian/tasklit/branch/main/graph/badge.svg?token=BW3L9GQ7M1)](https://codecov.io/gh/straussmaximilian/tasklit)
 ![tests](https://github.com/straussmaximilian/tasklit/actions/workflows/run_unittests_and_linting.yml/badge.svg?branch=main)
-
+[![Downloads](https://pepy.tech/badge/tasklit)](https://pepy.tech/project/tasklit)
 
 # tasklit
 A browser-based task scheduling app build on streamlit.
@@ -14,16 +14,24 @@ Too lazy to write cronjobs? Working on a headless system and want to have a GUI?
 ### Get started
 
 * create an environment `conda create --name tasklit python=3.8`
-* install `pip install .`
+* install with `pip install tasklit`
 * run with `tasklit`
 * visit the website (default is `http://localhost:8501` or network ip)
 * Submit a new task. Example to run a test script on your desktop on a Mac system: `python \Users\username\Desktop\myscript.py`
+
+For local development:
+* Clone the repository locally: `git clone https://github.com/straussmaximilian/tasklit.git`
+* install with `pip install .` or `pip install -e .` for the editable version
+* for pinned requirments install the development-requirements: `pip install .[develop]`
 
 ## Limitations
 * Only task execution, no logic based on return values
 
 ## Planned
 * Notifications (Email, Slack, Teams)
+
+## Acknowledgements
+The PyPi workflow and installation routine is largely copied form the [AlphaTims](https://github.com/MannLabs/alphatims)- repository.
 
 ## Tests
 * Run tests via

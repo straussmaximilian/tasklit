@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [ 3.9 ]
+        python-version: [ 3.8 ]
     steps:
       - uses: actions/checkout@v2
       - name: Set up Python ${{ matrix.python-version }}
@@ -24,6 +24,7 @@ jobs:
           pip install flake8
       - name: Run unit tests with code coverage
         run: |
+          pip install coverage
           coverage run -m unittest discover tests
       - name: Generate coverage report
         run: |
