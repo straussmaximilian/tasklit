@@ -3,6 +3,8 @@ omit = .env/*
        *tests*
        *__init__.py
        .idea/*
+       *app.py
+       *__main__.py
 source = tasklit
 
 [html]

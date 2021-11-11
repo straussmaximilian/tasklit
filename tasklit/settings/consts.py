@@ -1,53 +1,69 @@
+"""Application settings and constants."""
+
 import os
-
+from dataclasses import dataclass
 from datetime import timedelta
+from typing import Dict
 
-#Home dir
-
-HOME_DIR = os.path.join(os.path.expanduser ('~'),'.tasklit')
+HOME_DIR: str = os.path.join(os.path.expanduser("~"), ".tasklit")
 
 if not os.path.isdir(HOME_DIR):
     os.mkdir(HOME_DIR)
 
-# DB Path
-APP_ENGINE_PATH = f"sqlite:///{HOME_DIR}/process_data.db"
+# Database parameters
+BASE_DATA_DIR: str = os.path.join(HOME_DIR, "data")
+SQLITE_APP_ENGINE: str = f"sqlite:///{BASE_DATA_DIR}/process.db"
 
-# Formats
-FORMAT = {
-    "task_id": [],
-    "created": [],
-    "process id": [],
-    "job name": [],
-    "command": [],
-    "last update": [],
-    "running": [],
-}
-DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
+DATE_FORMAT: str = "%Y-%m-%d %H:%M:%S"
 
 # Execution frequencies
-IMMEDIATE_FREQUENCY = "Once"
-INTERVAL_FREQUENCY = "Interval"
-DAILY_FREQUENCY = "Daily"
+IMMEDIATE_FREQUENCY: str = "Once"
+INTERVAL_FREQUENCY: str = "Interval"
+DAILY_FREQUENCY: str = "Daily"
 
 # Datetime values and translation settings
-TIME_VALUES = {"Minutes": 59, "Hours": 59, "Days": 364, "Weeks": 51}
-DATE_TRANSLATION = {"Days": timedelta(days=1), "Hours": timedelta(hours=1), "Minutes": timedelta(minutes=1),
-                    "Weeks": timedelta(weeks=1)}
-WEEK_DAYS = {
+TIME_VALUES: Dict[str, int] = {
+    "Minutes": 59,
+    "Hours": 59,
+    "Days": 364,
+    "Weeks": 51,
+}
+DATE_TRANSLATION: Dict[str, timedelta] = {
+    "Days": timedelta(days=1),
+    "Hours": timedelta(hours=1),
+    "Minutes": timedelta(minutes=1),
+    "Weeks": timedelta(weeks=1),
+}
+WEEK_DAYS: Dict[int, str] = {
     0: "Mon",
     1: "Tue",
     2: "Wed",
     3: "Thu",
     4: "Fri",
     5: "Sat",
-    6: "Sun"
+    6: "Sun",
 }
 
 # Log directories
-BASE_LOG_DIR = os.path.join(HOME_DIR, "logs")
-DEFAULT_LOG_DIR_OUT = f"{BASE_LOG_DIR}/stdout.txt"
+BASE_LOG_DIR: str = os.path.join(HOME_DIR, "logs")
+DEFAULT_LOG_DIR_OUT: str = f"{BASE_LOG_DIR}/stdout.txt"
 
-if os.name == 'nt':
-    DEFAULT_TEST_COMMAND = 'ping 8.8.8.8'
-else:
-    DEFAULT_TEST_COMMAND = 'ping 8.8.8.8 -c 5'
+DEFAULT_TEST_COMMAND: str = (
+    "ping 8.8.8.8" if os.name == "nt" else "ping 8.8.8.8 -c 5"
+)
+
+
+@dataclass
+class TaskInformation:
+    """Store information related to a specific job."""
+
+    task_name: str
+    command: str
+    average_duration: float
+    executions: int = 1
+
+
+MAIN_COLOR: str = "#f63366"
+H4_CSS_STYLE: str = (
+    f"text-align: center; font-size: 20px; color: {MAIN_COLOR};"
+)
