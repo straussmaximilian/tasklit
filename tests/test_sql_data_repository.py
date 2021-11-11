@@ -4,7 +4,7 @@ import unittest
 from unittest.mock import MagicMock, patch
 
 import pandas as pd
-from pandas.util.testing import assert_frame_equal
+from pandas.testing import assert_frame_equal
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.types import Boolean, Integer, String
 
