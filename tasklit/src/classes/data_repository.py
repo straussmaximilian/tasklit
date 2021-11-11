@@ -35,12 +35,12 @@ class DataRepository(ABC):
     @abstractmethod
     def save_dataframe(self, *args: Any, **kwargs: Any) -> None:
         """Convert a dataframe to a specific storage format."""
-        raise NotImplementedError
+        ...
 
     @abstractmethod
     def load_dataframe(self, *args: Any, **kwargs: Any) -> pd.DataFrame:
         """Load a dataframe from a specific storage format."""
-        raise NotImplementedError
+        ...
 
 
 class SQLDataRepository(DataRepository):
