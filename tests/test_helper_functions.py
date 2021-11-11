@@ -10,6 +10,7 @@ import psutil
 from pandas.testing import assert_frame_equal
 from streamlit.script_runner import RerunException
 
+from tasklit.src.utils.helpers import TaskObserver
 from tasklit.settings.consts import DEFAULT_LOG_DIR_OUT, WEEK_DAYS
 from tasklit.src.utils.helpers import (
     app_exception_handler,
@@ -1033,10 +1034,13 @@ class UtilFunctionsTestCase(unittest.TestCase):
 
         self.assertEqual(match_duration(now, start, duration), True)
 
+    @patch.object(TaskObserver, "__call__")
     @patch("tasklit.src.utils.helpers.write_job_execution_log")
     @patch("tasklit.src.utils.helpers.launch_command_process")
     def test_execute_job(
-        self, mock_launch_process: MagicMock, mock_write_log: MagicMock
+        self, mock_launch_process: MagicMock,
+        mock_write_log: MagicMock,
+        mock_call: MagicMock
     ):
         """Unittest for execute_job().
 
@@ -1045,6 +1049,7 @@ class UtilFunctionsTestCase(unittest.TestCase):
         THEN check that related job execution methods are called.
         """
         mock_launch_process.return_value.wait.return_value = True
+        mock_call.return_value = True
 
         execute_job(
             self.test_command,
