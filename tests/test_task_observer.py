@@ -16,6 +16,7 @@ class TaskObserverTestCase(unittest.TestCase):
         """Test class parameters."""
         super(TaskObserverTestCase, cls).setUpClass()
 
+        cls.func_arg_values = ("arg1", "job1", "arg2", "cool_command")
         with patch(
             "tasklit.src.classes.stat_tracker.TaskStatisticsTracker"
         ) as mock_tracker:
@@ -85,4 +86,57 @@ class TaskObserverTestCase(unittest.TestCase):
         WHEN _get_argument() is called
         THEN check that correct arg name is returned.
         """
-        pass
+        self.assertEqual(
+            self.observer_correct_args._get_argument(
+                "job_name", self.func_arg_values
+            ),
+            "job1",
+        )
+
+    def test_extract_task_details(self):
+        """Test TaskObserver.__call__().
+
+        GIVEN a decorated callable
+        WHEN called
+        THEN check that correct task details
+            are extracted by the decorator.
+        """
+        self.observer_correct_args.__call__(
+            "arg1", "job1", "arg2", "cool_command"
+        )
+
+        self.assertEqual(
+            self.observer_correct_args._task.task_name,
+            "job1",
+        )
+
+        self.assertEqual(
+            self.observer_correct_args._task.command,
+            "cool_command",
+        )
+
+        self.assertEqual(
+            self.observer_correct_args._task.average_duration,
+            0.0,
+        )
+
+        self.assertEqual(
+            self.observer_correct_args._task.executions,
+            1,
+        )
+
+    @patch.object(TaskObserver, "_run_task_tracker")
+    def test_tast_tracker_call(self, mock_run: MagicMock):
+        """Test TaskObserver._run_task_tracker().
+
+        GIVEN a decorated callable
+        WHEN called
+        THEN check that the task tracker is called.
+        """
+        mock_run.return_value = True
+
+        self.observer_correct_args.__call__(
+            "arg1", "job1", "arg2", "cool_command"
+        )
+
+        mock_run.assert_called_once()
