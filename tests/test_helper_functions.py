@@ -6,7 +6,6 @@ from unittest.mock import MagicMock, call, create_autospec, mock_open, patch
 import pandas as pd
 import psutil
 from pandas.testing import assert_frame_equal
-from sqlalchemy.exc import OperationalError
 from streamlit.script_runner import RerunException
 
 from tasklit.settings.consts import DEFAULT_LOG_DIR_OUT, WEEK_DAYS

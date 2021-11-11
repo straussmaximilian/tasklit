@@ -25,7 +25,12 @@ class ObserverArgumentsMissingTestCase(unittest.TestCase):
 
     def test_exception_representation(self):
         """Check exception error message."""
-        self.assertEqual(
+        self.assertIn(
+            "arg1",
             ObserverArgumentsMissing(self.missing_arguments).__str__(),
-            "Required arguments are missing: arg1, arg2.",
+        )
+
+        self.assertIn(
+            "arg2",
+            ObserverArgumentsMissing(self.missing_arguments).__str__(),
         )
