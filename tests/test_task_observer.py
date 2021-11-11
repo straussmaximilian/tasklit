@@ -89,7 +89,11 @@ class TaskObserverTestCase(unittest.TestCase):
             "job1",
         )
 
-    def test_extract_task_details(self):
+    @patch.object(TaskStatisticsTracker, "update_task_stats")
+    @patch.object(TaskStatisticsTracker, "_load_stats_df")
+    def test_extract_task_details(self,
+                                  mock_load: MagicMock,
+                                  mock_update: MagicMock):
         """Test TaskObserver.__call__().
 
         GIVEN a decorated callable
@@ -97,36 +101,32 @@ class TaskObserverTestCase(unittest.TestCase):
         THEN check that correct task details
             are extracted by the decorator.
         """
-        with patch(
-            "tasklit.src.classes.stat_tracker.TaskStatisticsTracker"
-        ) as mock_tracker:
+        mock_load.return_value = True
+        mock_update.return_value = True
 
-            mock_tracker._load_stats_df.return_value = True
-            mock_tracker.update_task_stats.return_value = True
+        self.observer_correct_args.__call__(
+            "arg1", "job1", "arg2", "cool_command"
+        )
 
-            self.observer_correct_args.__call__(
-                "arg1", "job1", "arg2", "cool_command"
-            )
+        self.assertEqual(
+            self.observer_correct_args._task.task_name,
+            "job1",
+        )
 
-            self.assertEqual(
-                self.observer_correct_args._task.task_name,
-                "job1",
-            )
+        self.assertEqual(
+            self.observer_correct_args._task.command,
+            "cool_command",
+        )
 
-            self.assertEqual(
-                self.observer_correct_args._task.command,
-                "cool_command",
-            )
+        self.assertEqual(
+            self.observer_correct_args._task.average_duration,
+            0.0,
+        )
 
-            self.assertEqual(
-                self.observer_correct_args._task.average_duration,
-                0.0,
-            )
-
-            self.assertEqual(
-                self.observer_correct_args._task.executions,
-                1,
-            )
+        self.assertEqual(
+            self.observer_correct_args._task.executions,
+            1,
+        )
 
     @patch.object(TaskStatisticsTracker, "_load_stats_df")
     @patch.object(TaskObserver, "_run_task_tracker")
